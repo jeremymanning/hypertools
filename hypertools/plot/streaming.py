@@ -109,7 +109,7 @@ class Stream:
                             self.signal.append(data)
 
                             print(data)
-                            print message.get('sampleNumber', data)
+                            print(message.get('sampleNumber', data))
 
                         except ValueError as e:
                             print(e)
