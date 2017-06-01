@@ -23,7 +23,7 @@ def draw(x, return_data=False, legend=None, title=None, save_path=False, labels=
          show=True, kwargs_list=None, fmt=None, group=False, animate=False,
          tail_duration=2, rotations=2, zoom=1, chemtrails=False, precog=False,
          bullettime=False, frame_rate=50, elev=10, azim=-60, duration=30,
-         explore=False):
+         explore=False, stream=False):
     """
     Draws the plot
     """
@@ -362,6 +362,25 @@ def draw(x, return_data=False, legend=None, title=None, save_path=False, labels=
 
         return lines
 
+    def update_lines_stream(num, stream, lines, trail_lines, cube_scale, tail_duration=2,
+                     rotations=2, zoom=1, chemtrails=False, elev=10):
+
+        if hasattr(update_lines_spin, 'planes'):
+            for plane in update_lines_spin.planes:
+                plane.remove()
+
+        update_lines_spin.planes = plot_cube(cube_scale)
+        ax.view_init(elev=elev, azim=rotations*(360*(num/(frame_rate*duration))))
+        ax.dist=9-zoom
+
+        for line in lines:
+            data = stream.get(10)
+            print(data)
+            line.set_data(data[0:2,:])
+            line.set_3d_properties(data[2, :])
+
+        return lines
+
     def dispatch_animate(x, ani_params):
         if x[0].shape[1] is 3:
             return animate_plot3D(x, **ani_params)
@@ -389,8 +408,12 @@ def draw(x, return_data=False, legend=None, title=None, save_path=False, labels=
         else:
             tail_duration = int(frame_rate*tail_duration)
 
-        # get line animation
-        if style in ['parallel', True]:
+        if style is 'stream':
+            line_ani = animation.FuncAnimation(fig, update_lines_stream, x[0].shape[0],
+                            fargs=(stream, lines, trail, 1, tail_duration, rotations, zoom, chemtrails, elev),
+                            interval=1000/frame_rate, blit=False, repeat=False)
+
+        elif style in ['parallel', True]:
             line_ani = animation.FuncAnimation(fig, update_lines_parallel, x[0].shape[0],
                             fargs=(x, lines, trail, 1, tail_duration, rotations, zoom, chemtrails, elev),
                             interval=1000/frame_rate, blit=False, repeat=False)
@@ -420,7 +443,7 @@ def draw(x, return_data=False, legend=None, title=None, save_path=False, labels=
         return fig, ax, x, line_ani
 
     # draw the plot
-    if animate in [True, 'parallel', 'spin']:
+    if animate in [True, 'parallel', 'spin', 'stream']:
 
         assert x[0].shape[1] is 3, "Animations are currently only supported for 3d plots."
 

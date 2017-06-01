@@ -140,6 +140,16 @@ def plot(x, fmt=None, marker=None, markers=None, linestyle=None,
 
     """
 
+    # check to see if data is a stream
+    if check_data(x) is 'stream':
+
+        x.init(duration=1, model='PCA')
+        stream = x
+        x = x.model_signal
+        stream.start()
+    else:
+        stream = False
+
     # turn data into common format - a list of arrays
     x = format_data(x)
 
@@ -262,7 +272,8 @@ def plot(x, fmt=None, marker=None, markers=None, linestyle=None,
                             frame_rate=frame_rate,
                             elev=elev,
                             azim=azim,
-                            explore=explore)
+                            explore=explore,
+                            stream=stream)
 
     # tighten layout
     plt.tight_layout()

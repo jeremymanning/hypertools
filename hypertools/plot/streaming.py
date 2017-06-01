@@ -3,6 +3,8 @@ import sys
 import numpy as np
 import time
 import zmq
+from sklearn.decomposition import PCA as PCA
+import threading, time
 
 class Interface:
     def __init__(self, port=3000, verbose=False):
@@ -67,7 +69,8 @@ class RingBuffer(np.ndarray):
 class Stream:
     """
     """
-    def __init__(self, port=3000, buffer_size=2500, nb_chans=8, verbose=False):
+    def __init__(self, port=3000, buffer_size=2500, nb_chans=8, sample_rate=250,
+                 verbose=False):
 
         # port
         self.port = port
@@ -75,51 +78,82 @@ class Stream:
         #  size
         self.buffer_size = buffer_size
 
+        # sample rate
+        self.sample_rate = sample_rate
+
+        # number of channels
+        self.nb_chans = nb_chans
+
         # create a new python interface.
         self.interface = Interface(port=port, verbose=verbose)
 
-        self.signal = RingBuffer(np.zeros((nb_chans + 1, buffer_size)))
+        # create buffer
+        self.signal = RingBuffer(np.zeros((nb_chans, buffer_size)))
 
+        # attach methods
         self.start = self.start
+        self.get = self.get
+        self.init = self.init
+        self.parse_sample = self.parse_sample
+
+    def init(self, duration=1, model='PCA'):
+        self.model_signal = np.zeros((self.sample_rate * duration, self.nb_chans))
+        i=0
+        while i < (self.sample_rate * duration):
+            self.model_signal[i,:]=self.parse_sample(self.interface.recv())
+            i+=1
+        self.model = PCA(n_components=3)
+        self.model.fit(self.model_signal)
+
+    def transform(self, x):
+        return self.model.transform(x)
+
+    def get(self, samples):
+        return self.transform(self.signal[:, -samples:].T).T*10000
 
     def start(self):
 
-        while True:
-            msg = self.interface.recv()
-            try:
-                dicty = json.loads(msg)
-                action = dicty.get('action')
-                command = dicty.get('command')
-                message = dicty.get('message')
+        def stream():
+            while True:
+                msg = self.interface.recv()
+                self.signal.append(self.parse_sample(msg))
 
-                if command == 'sample':
-                    if action == 'process':
-                        # Do sample processing here
-                        try:
-                            if type(message) is not dict:
-                                print("sample is not a dict", message)
-                                raise ValueError
-                            # Get keys of sample
-                            data = np.zeros(9)
+        thread = threading.Thread(target=stream)
+        thread.start()
 
-                            data[:-1] = message.get('channelData')
-                            data[-1] = message.get('timeStamp')
+    def parse_sample(self, msg):
+        try:
+            dicty = json.loads(msg)
+            action = dicty.get('action')
+            command = dicty.get('command')
+            message = dicty.get('message')
 
-                            # Add data to end of ring buffer
-                            self.signal.append(data)
+            if command == 'sample':
+                if action == 'process':
+                    # Do sample processing here
+                    try:
+                        if type(message) is not dict:
+                            print("sample is not a dict", message)
+                            raise ValueError
 
-                            print(data)
-                            print(message.get('sampleNumber', data))
+                        # Get keys of sample
+                        data = np.zeros(8)
 
-                        except ValueError as e:
-                            print(e)
-                elif command == 'status':
-                    if action == 'active':
-                        interface.send(json.dumps({
-                            'action': 'alive',
-                            'command': 'status',
-                            'message': time.time() * 1000.0
-                        }))
+                        data = message.get('channelData')
 
-            except BaseException as e:
-                print(e)
+                        return data
+
+                        # print(message.get('sampleNumber', data))
+
+                    except ValueError as e:
+                        print(e)
+            elif command == 'status':
+                if action == 'active':
+                    interface.send(json.dumps({
+                        'action': 'alive',
+                        'command': 'status',
+                        'message': time.time() * 1000.0
+                    }))
+
+        except BaseException as e:
+            print(e)

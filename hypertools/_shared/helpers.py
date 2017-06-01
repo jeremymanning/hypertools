@@ -14,6 +14,7 @@ import seaborn as sns
 import itertools
 import pandas as pd
 from matplotlib.lines import Line2D
+from ..plot.streaming import Stream
 
 ##HELPER FUNCTIONS##
 def center(x):
@@ -79,7 +80,9 @@ def interp_array_list(arr_list,interp_val=10):
 	return smoothed
 
 def check_data(data):
-	if type(data) is list:
+	if isinstance(data, Stream):
+		return 'stream'
+	elif type(data) is list:
 		if all([isinstance(x, np.ndarray) for x in data]):
 			return 'list'
 		elif all([isinstance(x, pd.DataFrame) for x in data]):
@@ -91,7 +94,7 @@ def check_data(data):
 	elif isinstance(data, pd.DataFrame):
 		return 'df'
 	else:
-		raise ValueError("Data must be numpy array, list of numpy array, pandas dataframe or list of pandas dataframes.")
+		raise ValueError("Data must be numpy array, list of numpy array, pandas dataframe, list of pandas dataframes or hyp.Stream object.")
 
 def parse_args(x,args):
 	args_list = []
@@ -143,7 +146,7 @@ def format_data(x):
 	if data_type=='df':
 		x = df2mat(x)
 
-	if data_type=='dflist':
+	elif data_type=='dflist':
 		x = [df2mat(i) for i in x]
 
 	if type(x) is not list:
