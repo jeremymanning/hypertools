@@ -14,7 +14,7 @@ class Interface:
         self.verbose = verbose
 
         if self.verbose:
-            print "Client Ready!"
+            print("Client Ready!")
 
         # Send a quick message to tell node process we are up and running
         self.send(json.dumps({
@@ -31,7 +31,7 @@ class Interface:
         :return: None
         """
         if self.verbose:
-            print '<- out ' + msg
+            print('<- out ' + msg)
         self._socket.send(msg)
         return
 
@@ -97,7 +97,7 @@ class Stream:
                         # Do sample processing here
                         try:
                             if type(message) is not dict:
-                                print "sample is not a dict", message
+                                print("sample is not a dict", message)
                                 raise ValueError
                             # Get keys of sample
                             data = np.zeros(9)
@@ -112,7 +112,7 @@ class Stream:
                             print message.get('sampleNumber', data)
 
                         except ValueError as e:
-                            print e
+                            print(e)
                 elif command == 'status':
                     if action == 'active':
                         interface.send(json.dumps({
@@ -122,4 +122,4 @@ class Stream:
                         }))
 
             except BaseException as e:
-                print e
+                print(e)
