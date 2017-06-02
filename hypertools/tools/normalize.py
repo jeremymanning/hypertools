@@ -2,9 +2,10 @@
 
 from __future__ import division
 from builtins import range
-from sklearn.preprocessing import FunctionTransformer
+# from sklearn.preprocessing import FunctionTransformer
 import numpy as np
 from .._shared.helpers import format_data
+from .._shared.helpers import zscore
 
 def normalize(x, normalize='across', internal=False):
     """
@@ -42,8 +43,6 @@ def normalize(x, normalize='across', internal=False):
     assert normalize in ['across','within','row', False], "scale_type must be across, within, row or none."
 
     x = format_data(x)
-
-    zscore = lambda X,y: (y - np.mean(X)) / np.std(X) if len(set(y))>1 else np.zeros(y.shape)
 
     if normalize=='across':
         x_stacked=np.vstack(x)

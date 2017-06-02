@@ -374,10 +374,9 @@ def draw(x, return_data=False, legend=None, title=None, save_path=False, labels=
         ax.dist=9-zoom
 
         for line in lines:
-            data = stream.get(10)
-            print(data)
-            line.set_data(data[0:2,:])
-            line.set_3d_properties(data[2, :])
+            data = stream.get(125)
+            line.set_data(data[:,0:2].T)
+            line.set_3d_properties(data[:, 2])
 
         return lines
 

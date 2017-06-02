@@ -143,7 +143,7 @@ def plot(x, fmt=None, marker=None, markers=None, linestyle=None,
     # check to see if data is a stream
     if check_data(x) is 'stream':
 
-        x.init(duration=1, model='PCA')
+        x.init(duration=30, model='PCA')
         stream = x
         x = x.model_signal
         stream.start()

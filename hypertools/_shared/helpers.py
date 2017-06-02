@@ -167,3 +167,6 @@ def patch_lines(x):
 
 def is_line(format_str):
 	return (format_str is None) or (all([str(symbol) not in format_str for symbol in Line2D.markers.keys()]))
+
+def zscore(X, y):
+	return (y - np.mean(X)) / np.std(X) if len(set(y))>1 else np.zeros(y.shape)

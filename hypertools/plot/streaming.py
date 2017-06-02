@@ -4,15 +4,23 @@ import numpy as np
 import time
 import zmq
 from sklearn.decomposition import PCA as PCA
+from .._shared.helpers import *
 import threading, time
+
+def zscore(X, y):
+    return (y - np.mean(X)) / np.std(X) if len(set(y))>1 else np.zeros(y.shape)
+
+def scale(x):
+    m1 = np.min(x)
+    m2 = np.max(x - m1)
+    f = lambda x: 2*((x - m1) / m2) - 1
+    return f(x), m1, m2
 
 class Interface:
     def __init__(self, port=3000, verbose=False):
         context = zmq.Context()
         self._socket = context.socket(zmq.PAIR)
-        # self._socket.connect("tcp://localhost:%d" % port)
         self._socket.connect("tcp://localhost:%d" % int(port))
-
         self.verbose = verbose
 
         if self.verbose:
@@ -96,7 +104,10 @@ class Stream:
         self.init = self.init
         self.parse_sample = self.parse_sample
 
-    def init(self, duration=1, model='PCA'):
+    def init(self, duration=10, model='PCA'):
+        """
+        """
+        print('Fitting dimensionality reduction model...')
         self.model_signal = np.zeros((self.sample_rate * duration, self.nb_chans))
         i=0
         while i < (self.sample_rate * duration):
@@ -104,12 +115,19 @@ class Stream:
             i+=1
         self.model = PCA(n_components=3)
         self.model.fit(self.model_signal)
+        print('Model fit!')
+
+        self.model_signal, self.model_signal_min, self.model_signal_max \
+        = scale(self.model.transform(self.model_signal))
 
     def transform(self, x):
         return self.model.transform(x)
 
+    def scale(self, x):
+        return 2 * ((x - self.model_signal_min) / self.model_signal_max) - 1
+
     def get(self, samples):
-        return self.transform(self.signal[:, -samples:].T).T*10000
+        return self.scale(self.transform(self.signal[:, -samples:].T))
 
     def start(self):
 
