@@ -6,6 +6,13 @@ import zmq
 from sklearn.decomposition import PCA as PCA
 from .._shared.helpers import *
 import threading, time
+from pynput import keyboard
+
+global LASTKEY; LASTKEY = None
+
+def on_press(key):
+    global LASTKEY
+    LASTKEY = key.char
 
 def zscore(X, y):
     return (y - np.mean(X)) / np.std(X) if len(set(y))>1 else np.zeros(y.shape)
