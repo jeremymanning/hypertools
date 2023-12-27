@@ -4,7 +4,6 @@ requests
 dill
 six
 numpy>=1.19.5
-sklearn
 scikit-learn
 pandas
 scipy
