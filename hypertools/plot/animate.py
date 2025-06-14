@@ -67,9 +67,18 @@ class Animator:
         # union of unique indices
         indices = list(index_vals)
 
-        # compress or stretch (repeat) indices to match the requested duration and framerate
-        self.indices = np.linspace(np.min(indices), np.max(indices), self.duration * self.framerate + 1)
+        # For line plots, use high frame count with interpolation for smoothness
+        # For scatter plots, we can reduce frame count
+        if self.opts.get('mode', 'markers') == 'lines':
+            # High frame count for smooth line animation with interpolation
+            self.indices = np.linspace(np.min(indices), np.max(indices), self.duration * self.framerate + 1)
+        else:
+            # Lower frame count for discrete plots
+            unique_indices = sorted(list(set(indices)))
+            self.indices = np.array(unique_indices)
+        
         n_frames = len(self.indices)
+        print(f"Animation: {self.opts.get('mode', 'markers')} mode -> {n_frames} frames")
 
         window_length = int(np.floor(n_frames * self.focused / self.duration))
         self.window_starts = np.concatenate([np.zeros([window_length]),
@@ -86,6 +95,58 @@ class Animator:
 
         self.angles = np.linspace(0, self.rotations * 360, len(self.window_starts) + 1)[:-1]
 
+    def generate_frames_optimized(self):
+        """Optimized frame generation - pre-compute all frame data in batch"""
+        frames = []
+        mode = self.opts.get('mode', 'markers')
+        
+        # Pre-extract data once
+        if type(self.data) is list:
+            data_values = [d.values for d in self.data]
+            data_indices = [d.index.values for d in self.data]
+        else:
+            data_values = [self.data.values]
+            data_indices = [self.data.index.values]
+        
+        # Generate frames in batch
+        for i in range(len(self.angles)):
+            frame_data = []
+            
+            if self.style == 'window':
+                # Get window data efficiently
+                window_start = self.window_starts[i] 
+                window_end = self.window_ends[i]
+                
+                for dv, di in zip(data_values, data_indices):
+                    # Find indices in window
+                    start_idx = self.indices[int(window_start)]
+                    end_idx = self.indices[int(window_end)]
+                    
+                    mask = (di >= start_idx) & (di <= end_idx)
+                    if np.any(mask):
+                        windowed_data = dv[mask]
+                        
+                        if windowed_data.shape[1] == 2:
+                            trace = go.Scatter(
+                                x=windowed_data[:, 0],
+                                y=windowed_data[:, 1],
+                                mode=mode,
+                                opacity=self.focused_alpha
+                            )
+                        else:  # 3D
+                            trace = go.Scatter3d(
+                                x=windowed_data[:, 0],
+                                y=windowed_data[:, 1], 
+                                z=windowed_data[:, 2],
+                                mode=mode,
+                                opacity=self.focused_alpha
+                            )
+                        frame_data.append(trace)
+            
+            frames.append(go.Frame(data=frame_data, name=str(i)))
+        
+        return frames
+
     def build_animation(self):
         frame_duration = 1000 * self.duration / len(self.angles)
 
@@ -93,14 +154,17 @@ class Animator:
         fig = self.fig.to_dict().copy()
 
         # add buttons and slider and define transitions
+        # Use smoother transition settings
+        transition_duration = min(frame_duration * 0.3, 100)  # Smooth but not too slow
+        
         fig['layout']['updatemenus'] = [{'buttons': [{
             'label': ' ▶',  # play button
-            'args': [None, {'frame': {'duration': frame_duration, 'redraw': self.proj == '3d'},
+            'args': [None, {'frame': {'duration': frame_duration, 'redraw': False},  # Disable redraw
                             'fromcurrent': True,
-                            'transition': {'duration': 0}}],
+                            'transition': {'duration': transition_duration}}],  # Add smooth transition
             'method': 'animate'}, {
             'label': ' ||',  # stop/pause button
-            'args': [[None], {'frame': {'duration': 0, 'redraw': True},
+            'args': [[None], {'frame': {'duration': 0, 'redraw': False},  # Disable redraw
                               'mode': 'immediate',
                               'transition': {'duration': 0}}],
             'method': 'animate'}],
@@ -145,9 +209,9 @@ class Animator:
         }
         for i in range(len(self.angles)):
             slider_step = {'args': [[i],
-                                    {'frame': {'duration': frame_duration, 'redraw': self.proj == '3d'},
+                                    {'frame': {'duration': frame_duration, 'redraw': False},  # Disable redraw
                                      'mode': 'immediate',
-                                     'transition': {'duration': 0}}],
+                                     'transition': {'duration': transition_duration}}],  # Add smooth transition
                            'label': str(i),
                            'method': 'animate'}
             slider['steps'].append(slider_step)
@@ -155,10 +219,10 @@ class Animator:
         # connect slider to frames
         fig['layout']['sliders'] = [slider]
 
-        # add frames
+        # add frames - use optimized batch generation
         init = self.get_frame(0)
         fig['data'] = init.data
-        fig['frames'] = [self.get_frame(i, simplify=True) for i in range(len(self.angles))]
+        fig['frames'] = self.generate_frames_optimized()
 
         # convert to figure object and make bounds consistent across frames
         fig = go.Figure(fig)
@@ -220,17 +284,24 @@ class Animator:
         if type(x) is list:
             return [self.get_window(i, w_start, w_end) for i in x]
 
-        return x.loc[self.indices[int(w_start)]:self.indices[int(w_end)]]
+        # Get the actual time range for this window
+        start_time = self.indices[int(w_start)]
+        end_time = self.indices[int(w_end)]
+        
+        # Filter data by time index (not integer position)
+        mask = (x.index >= start_time) & (x.index <= end_time)
+        return x[mask]
 
     @classmethod
-    def get_datadict(cls, data):
+    def get_datadict(cls, data, mode='markers', **kwargs):
         if type(data) is list:
-            return [cls.get_datadict(d)[0] for d in data]
+            return [cls.get_datadict(d, mode=mode, **kwargs)[0] for d in data]
         elif data.shape[1] == 2:
-            return [go.Scatter(x=flatten(data.values[:, 0]), y=flatten(data.values[:, 1]))]
+            return [go.Scatter(x=flatten(data.values[:, 0]), y=flatten(data.values[:, 1]), 
+                              mode=mode, **kwargs)]
         elif data.shape[1] == 3:
             return [go.Scatter3d(x=flatten(data.values[:, 0]), y=flatten(data.values[:, 1]),
-                                 z=flatten(data.values[:, 2]))]
+                                 z=flatten(data.values[:, 2]), mode=mode, **kwargs)]
         else:
             raise ValueError(f'data must be either 2D or 3D; given: {data.shape[1]}D')
 
@@ -265,12 +336,16 @@ class Animator:
             else:
                 bb = []
 
+            # Extract mode from opts for frame generation
+            mode = self.opts.get('mode', 'markers')
+            
             if extra is not None:
                 # noinspection PyTypeChecker
-                return go.Frame(data=[*bb, *Animator.get_datadict(window), *Animator.get_datadict(extra)], name=str(i),
-                                **kwargs)
+                return go.Frame(data=[*bb, *Animator.get_datadict(window, mode=mode), 
+                                     *Animator.get_datadict(extra, mode=mode, opacity=self.unfocused_alpha)], 
+                               name=str(i), **kwargs)
             else:
-                return go.Frame(data=[*bb, *Animator.get_datadict(window)], name=str(i), **kwargs)
+                return go.Frame(data=[*bb, *Animator.get_datadict(window, mode=mode)], name=str(i), **kwargs)
         else:
             if self.bounding_box:
                 self.fig = plot_bounding_box(get_bounds(self.data), fig=self.fig)
