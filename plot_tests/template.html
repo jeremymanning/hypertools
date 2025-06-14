@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HyperTools Plot Test Suite</title>
+    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        h1 {
+            color: #333;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .plot-container {
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin-bottom: 30px;
+            padding: 20px;
+        }
+        .plot-header {
+            border-bottom: 2px solid #007bff;
+            padding-bottom: 10px;
+            margin-bottom: 20px;
+        }
+        .plot-title {
+            font-size: 20px;
+            font-weight: bold;
+            color: #333;
+        }
+        .plot-description {
+            color: #666;
+            margin-top: 5px;
+            font-size: 14px;
+        }
+        .plot-wrapper {
+            min-height: 400px;
+            margin-bottom: 15px;
+        }
+        .feedback-section {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            padding: 15px;
+            background-color: #f8f9fa;
+            border-radius: 5px;
+        }
+        .feedback-buttons {
+            display: flex;
+            gap: 10px;
+        }
+        .btn {
+            padding: 8px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: background-color 0.3s;
+        }
+        .btn-success {
+            background-color: #28a745;
+            color: white;
+        }
+        .btn-success:hover {
+            background-color: #218838;
+        }
+        .btn-danger {
+            background-color: #dc3545;
+            color: white;
+        }
+        .btn-danger:hover {
+            background-color: #c82333;
+        }
+        .btn-warning {
+            background-color: #ffc107;
+            color: #333;
+        }
+        .btn-warning:hover {
+            background-color: #e0a800;
+        }
+        .feedback-status {
+            font-weight: bold;
+            padding: 5px 10px;
+            border-radius: 4px;
+        }
+        .status-correct {
+            background-color: #d4edda;
+            color: #155724;
+        }
+        .status-incorrect {
+            background-color: #f8d7da;
+            color: #721c24;
+        }
+        .status-needs-review {
+            background-color: #fff3cd;
+            color: #856404;
+        }
+        .summary {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+            z-index: 1000;
+        }
+        .summary h3 {
+            margin-top: 0;
+            font-size: 16px;
+        }
+        .notes-input {
+            width: 100%;
+            min-height: 60px;
+            margin-top: 10px;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            resize: vertical;
+        }
+        .save-results {
+            margin-top: 20px;
+            text-align: center;
+        }
+        .btn-primary {
+            background-color: #007bff;
+            color: white;
+            padding: 10px 30px;
+            font-size: 16px;
+        }
+        .btn-primary:hover {
+            background-color: #0056b3;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>HyperTools Plot Test Suite</h1>
+        
+        <div class="summary" id="summary">
+            <h3>Test Summary</h3>
+            <div>Total: <span id="total-count">0</span></div>
+            <div>✓ Correct: <span id="correct-count">0</span></div>
+            <div>✗ Incorrect: <span id="incorrect-count">0</span></div>
+            <div>⚠ Needs Review: <span id="review-count">0</span></div>
+        </div>
+
+        <div id="plots-container">
+            <!-- Plots will be inserted here -->
+        </div>
+
+        <div class="save-results">
+            <button class="btn btn-primary" onclick="saveResults()">Save Test Results</button>
+        </div>
+    </div>
+
+    <script>
+        // Store feedback for each plot
+        const plotFeedback = {};
+        
+        function updateSummary() {
+            const total = Object.keys(plotFeedback).length;
+            const correct = Object.values(plotFeedback).filter(f => f.status === 'correct').length;
+            const incorrect = Object.values(plotFeedback).filter(f => f.status === 'incorrect').length;
+            const review = Object.values(plotFeedback).filter(f => f.status === 'needs-review').length;
+            
+            document.getElementById('total-count').textContent = total;
+            document.getElementById('correct-count').textContent = correct;
+            document.getElementById('incorrect-count').textContent = incorrect;
+            document.getElementById('review-count').textContent = review;
+        }
+
+        function setFeedback(plotId, status) {
+            // Update feedback data
+            if (!plotFeedback[plotId]) {
+                plotFeedback[plotId] = {};
+            }
+            plotFeedback[plotId].status = status;
+            
+            // Update UI
+            const statusDiv = document.getElementById(`status-${plotId}`);
+            statusDiv.className = 'feedback-status';
+            
+            if (status === 'correct') {
+                statusDiv.classList.add('status-correct');
+                statusDiv.textContent = '✓ Looks Correct';
+            } else if (status === 'incorrect') {
+                statusDiv.classList.add('status-incorrect');
+                statusDiv.textContent = '✗ Has Issues';
+            } else if (status === 'needs-review') {
+                statusDiv.classList.add('status-needs-review');
+                statusDiv.textContent = '⚠ Needs Review';
+            }
+            
+            // Save notes
+            const notes = document.getElementById(`notes-${plotId}`).value;
+            plotFeedback[plotId].notes = notes;
+            
+            updateSummary();
+        }
+
+        function saveResults() {
+            // Add plot titles to feedback
+            const plots = document.querySelectorAll('.plot-container');
+            plots.forEach(plot => {
+                const plotId = plot.id;
+                const title = plot.querySelector('.plot-title').textContent;
+                if (plotFeedback[plotId]) {
+                    plotFeedback[plotId].title = title;
+                }
+            });
+
+            const results = {
+                timestamp: new Date().toISOString(),
+                feedback: plotFeedback
+            };
+            
+            // Create a blob and download
+            const blob = new Blob([JSON.stringify(results, null, 2)], {type: 'application/json'});
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `plot_test_results_${new Date().toISOString().split('T')[0]}.json`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+            
+            alert('Results saved! Check your downloads folder.');
+        }
+
+        // Initialize feedback for existing plots
+        function initializeFeedback() {
+            const plots = document.querySelectorAll('.plot-container');
+            plots.forEach(plot => {
+                const plotId = plot.id;
+                if (!plotFeedback[plotId]) {
+                    plotFeedback[plotId] = {status: 'needs-review', notes: ''};
+                }
+            });
+            updateSummary();
+        }
+
+        // Call this when page loads
+        window.addEventListener('load', initializeFeedback);
+    </script>
+</body>
+</html>

@@ -129,6 +129,10 @@ def labels2colors(c, **kwargs):
 
         return colors
 
+    # Convert list of labels to DataFrame if needed
+    if isinstance(c, list) and len(c) > 0 and isinstance(c[0], str):
+        c = pd.DataFrame({'label': c})
+    
     stacked_labels = dw.stack(c)
     if stacked_labels.shape[1] == 1:  # discrete labels
         groups = np.unique(stacked_labels)
@@ -420,7 +424,17 @@ def plot(original_data, *fmt, **kwargs):
 
     pre = kwargs.pop('pre', None)
     aligners = kwargs.pop('align', None)
-    reducers = kwargs.pop('reduce', {'model': 'IncrementalPCA', 'args': [], 'kwargs': {'n_components': 3}})
+    # Don't apply default reduction if data is already low-dimensional
+    if type(data) is list:
+        max_dims = max(d.shape[1] for d in data)
+    else:
+        max_dims = data.shape[1]
+    
+    if max_dims <= 3:
+        reducers = kwargs.pop('reduce', None)
+    else:
+        reducers = kwargs.pop('reduce', {'model': 'IncrementalPCA', 'args': [], 'kwargs': {'n_components': 3}})
+    
     clusterers = kwargs.pop('cluster', None)
     post = kwargs.pop('post', None)
 
@@ -445,9 +459,17 @@ def plot(original_data, *fmt, **kwargs):
 
     cmap = kwargs.pop('cmap', eval(defaults['plot']['cmap']))
     color_kwargs = kwargs.pop('color_kwargs', kwargs)
+    
+    # Handle 'hue' parameter for plotly compatibility
+    hue = kwargs.pop('hue', None)
+    
     if clusterers is not None:
         cluster_labels = cluster(data, model=clusterers)
         colors, kwargs['legend_override'] = labels2colors(cluster_labels, cmap=cmap,
+                                                          **dw.core.update_dict(kwargs, color_kwargs))
+    elif hue is not None:
+        # Convert hue labels to colors
+        colors, kwargs['legend_override'] = labels2colors(hue, cmap=cmap,
                                                           **dw.core.update_dict(kwargs, color_kwargs))
     else:
         if 'color' not in kwargs.keys() or kwargs['color'] is None:
@@ -459,10 +481,14 @@ def plot(original_data, *fmt, **kwargs):
     kwargs['color'] = colors
 
     if type(data) is list:
-        c = np.max([*[d.shape[1] for d in data], 2])
+        # Only pad to the maximum dimensionality present in the data
+        c = np.max([d.shape[1] for d in data])
     else:
-        c = np.max([data.shape[1], 2])
-    data = pad(data, c)
+        c = data.shape[1]
+    
+    # Only pad if we have mixed dimensionality
+    if type(data) is list and len(set([d.shape[1] for d in data])) > 1:
+        data = pad(data, c)
 
     renderer = kwargs.pop('renderer', None)
     update_plotly_renderer(backend=renderer)

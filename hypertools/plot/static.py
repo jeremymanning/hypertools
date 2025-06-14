@@ -293,7 +293,23 @@ def static_plot(data, **kwargs):
                         group_inds = np.append(group_inds, [max(group_inds) + 1])
 
                     group_opts = opts.copy()
-                    group_opts['legendgroup'] = legend_override['names'][k]
+                    # Find the index of this label in the names list
+                    if isinstance(legend_override['names'], list):
+                        # Convert names list to dict mapping label -> name
+                        if k in legend_override['names']:
+                            group_opts['legendgroup'] = k
+                        else:
+                            # Try to find by index if k is numeric
+                            try:
+                                idx = int(k)
+                                if 0 <= idx < len(legend_override['names']):
+                                    group_opts['legendgroup'] = legend_override['names'][idx]
+                                else:
+                                    group_opts['legendgroup'] = str(k)
+                            except (ValueError, TypeError):
+                                group_opts['legendgroup'] = str(k)
+                    else:
+                        group_opts['legendgroup'] = legend_override['names'][k]
                     fig.add_trace(get_plotly_shape(data.values[group_inds, :],
                                                    **dw.core.update_dict(kwargs, group_opts),
                                                    color=mpl2plotly_color(c)))
