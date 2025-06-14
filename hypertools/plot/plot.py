@@ -480,4 +480,13 @@ def plot(original_data, *fmt, **kwargs):
     bounding_box = kwargs.pop('bounding_box', False)
     if bounding_box:
         kwargs['fig'] = plot_bounding_box(get_bounds(data), fig=kwargs['fig'])
-    return static_plot(data, **kwargs)
+    
+    # Handle save_path parameter
+    save_path = kwargs.pop('save_path', None)
+    fig = static_plot(data, **kwargs)
+    
+    if save_path is not None:
+        from .print import hypersave
+        hypersave(fig, save_path)
+    
+    return fig

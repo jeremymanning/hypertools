@@ -57,6 +57,7 @@ def trim_and_pad(data):
         rows = rows.intersection(set(d.index.values))
 
     c = np.max([x.shape[1] for x in data])
+    rows = list(rows)  # Convert set to list for pandas indexing
     x = [pad(d.loc[rows], c) for d in data]
     return x
 
