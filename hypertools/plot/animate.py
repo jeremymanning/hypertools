@@ -67,15 +67,22 @@ class Animator:
         # union of unique indices
         indices = list(index_vals)
 
-        # For line plots, use high frame count with interpolation for smoothness
-        # For scatter plots, we can reduce frame count
-        if self.opts.get('mode', 'markers') == 'lines':
-            # High frame count for smooth line animation with interpolation
-            self.indices = np.linspace(np.min(indices), np.max(indices), self.duration * self.framerate + 1)
+        # For line plots, use discrete timepoints with proper mapping for sliding windows
+        # For scatter plots, use the actual discrete timepoints
+        unique_indices = sorted(list(set(indices)))
+        
+        if self.opts.get('mode', 'markers') == 'lines' and self.style == 'window':
+            # For sliding window line animations, map interpolated frames to actual data ranges
+            # This creates smooth progression through real timepoints
+            n_frames = self.duration * self.framerate + 1
+            # Map frames to actual time ranges that span data points
+            self.indices = np.linspace(unique_indices[0], unique_indices[-1], n_frames)
+            # Store discrete indices for window calculations
+            self.discrete_indices = np.array(unique_indices)
         else:
-            # Lower frame count for discrete plots
-            unique_indices = sorted(list(set(indices)))
+            # For other animations, use discrete timepoints
             self.indices = np.array(unique_indices)
+            self.discrete_indices = self.indices
         
         n_frames = len(self.indices)
         print(f"Animation: {self.opts.get('mode', 'markers')} mode -> {n_frames} frames")
@@ -284,11 +291,28 @@ class Animator:
         if type(x) is list:
             return [self.get_window(i, w_start, w_end) for i in x]
 
-        # Get the actual time range for this window
-        start_time = self.indices[int(w_start)]
-        end_time = self.indices[int(w_end)]
+        # For sliding window animations with interpolated indices, map to actual data timepoints
+        if hasattr(self, 'discrete_indices') and len(self.discrete_indices) != len(self.indices):
+            # Calculate which discrete timepoints should be included in this window
+            frame_progress = int(w_end) / len(self.indices)  # 0.0 to 1.0
+            
+            # Determine sliding window size (e.g., show 2 consecutive timepoints)
+            window_size = max(1, int(len(self.discrete_indices) * self.focused / self.duration))
+            
+            # Calculate starting position in discrete timepoints
+            max_start = len(self.discrete_indices) - window_size
+            start_idx = int(frame_progress * max_start)
+            end_idx = start_idx + window_size
+            
+            # Get the actual timepoint range
+            start_time = self.discrete_indices[start_idx]
+            end_time = self.discrete_indices[min(end_idx - 1, len(self.discrete_indices) - 1)]
+        else:
+            # Use original logic for non-interpolated animations
+            start_time = self.indices[int(w_start)]
+            end_time = self.indices[int(w_end)]
         
-        # Filter data by time index (not integer position)
+        # Filter data by time index
         mask = (x.index >= start_time) & (x.index <= end_time)
         return x[mask]
 

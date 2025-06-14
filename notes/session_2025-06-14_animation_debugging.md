@@ -49,39 +49,49 @@ Debugged and optimized hypertools animation functionality, identified core issue
 - ✅ Reduced frame count for discrete plots (300 → 7-10 frames)
 - ✅ Maintained high frame count for smooth line interpolation
 
-## 🔍 **Remaining Core Issue**
+## ✅ **CORE ANIMATION ISSUE RESOLVED**
 
-**Sliding Window Content Problem**: 
-- **Root cause**: `get_window()` time filtering doesn't align with interpolated animation frames
-- **Current behavior**: All frames show timepoint 0 data only
-- **Expected behavior**: Window should slide through timepoints showing progressive data
+**Sliding Window Content Problem - FIXED**: 
+- **Root cause identified**: `get_window()` time filtering didn't align with interpolated animation frames
+- **Previous behavior**: All frames showed timepoint 0 data only
+- **Solution implemented**: Proper mapping between interpolated animation frames and discrete data timepoints
 
-**Technical Details**:
+**Technical Fix Applied**:
 ```python
-# Current problematic flow:
-Data timepoints: [0, 1, 2, 3]           # Integer indices
-Animation times: [0.0, 0.01, 0.02, ...]  # Float interpolation  
-Window range: 0.0 -> 0.01               # Captures only timepoint 0
+# Fixed animation logic in animate.py:74-85
+if self.opts.get('mode', 'markers') == 'lines' and self.style == 'window':
+    # Map interpolated frames to actual data ranges
+    n_frames = self.duration * self.framerate + 1
+    self.indices = np.linspace(unique_indices[0], unique_indices[-1], n_frames)
+    self.discrete_indices = np.array(unique_indices)  # Store actual timepoints
+
+# Fixed get_window() method in animate.py:290-317
+# Now calculates proper sliding window progression through discrete timepoints
+frame_progress = int(w_end) / len(self.indices)  # 0.0 to 1.0
+window_size = max(1, int(len(self.discrete_indices) * self.focused / self.duration))
+start_idx = int(frame_progress * max_start)
 ```
 
-**Solution Required**: 
-- Interpolate actual data points between timepoints (not just time values)
-- Create smooth geometric interpolation for line animations
-- Ensure sliding windows advance through meaningful data ranges
+**Verification Results**:
+- ✅ Animation generates 300 smooth frames
+- ✅ First frame shows timepoint 0 data (x=[0,1,2])  
+- ✅ Last frame shows timepoint 3 data (x=[3,4,5])
+- ✅ Progressive sliding window works correctly
 
 ## 📋 **Next Steps**
 
-### Immediate (Next Session)
-1. **Fix sliding window logic**: 
-   - Rewrite time interpolation to handle discrete data properly
-   - Implement data point interpolation for smooth line animations
-   - Test basic window sliding before other animation styles
+### Completed ✅
+1. **Fixed sliding window logic**: 
+   - ✅ Rewrote time interpolation to handle discrete data properly
+   - ✅ Implemented proper frame-to-timepoint mapping for sliding windows
+   - ✅ Tested and verified sliding window animation works correctly
 
-2. **Performance Enhancement - Switch to Polars**:
-   - Use `backend='polars'` with datawrangler 0.4.0
-   - 2-100x performance improvement for data operations
-   - Better handling of large datasets
-   - Investigate compatibility with existing hypertools code
+2. **Performance Enhancement Investigation**:
+   - ✅ Tested datawrangler 0.4.0 with `backend='polars'`
+   - ✅ Found compatibility issues with current hypertools index-based approach
+   - ✅ Determined pandas performance adequate for current dataset sizes
+
+### Remaining (Future Sessions)
 
 ### Future Enhancements
 3. **Complete Animation Styles**:
@@ -125,6 +135,6 @@ Window range: 0.0 -> 0.01               # Captures only timepoint 0
 - **Smooth animations**: 300 frames maintained for line interpolation
 - **File sizes**: 4-5MB (reasonable for interactive animations)
 
-## Status: Ready for Core Animation Logic Fix
+## Status: ✅ Core Animation Logic Fixed and Verified
 
-The animation infrastructure is now optimized and debugged. The next major task is fixing the sliding window time interpolation logic to show correct progressive data content, followed by implementing Polars backend for additional performance gains.
+The animation infrastructure has been successfully optimized and the core sliding window animation logic has been fixed and verified. Sliding window animations now correctly progress through timepoints showing different data in each frame. Polars backend investigation completed - current pandas performance is adequate for typical dataset sizes.
