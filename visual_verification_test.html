@@ -1,0 +1,558 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HyperTools Three.js Visual Verification</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            margin: 20px;
+            background-color: #f5f5f5;
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .figure-container {
+            background: white;
+            margin: 20px 0;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .figure-title {
+            font-size: 18px;
+            font-weight: bold;
+            color: #333;
+            margin-bottom: 15px;
+            border-bottom: 2px solid #007acc;
+            padding-bottom: 5px;
+        }
+        .figure-info {
+            background: #f8f9fa;
+            padding: 10px;
+            border-radius: 5px;
+            margin-bottom: 15px;
+            font-size: 14px;
+            color: #666;
+        }
+        .figure-widget {
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            padding: 10px;
+            background: #fafafa;
+            min-height: 400px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .feedback-section {
+            background: #e8f4fd;
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 20px;
+        }
+        .feedback-buttons {
+            display: flex;
+            gap: 10px;
+            margin-top: 10px;
+        }
+        .btn {
+            padding: 8px 16px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+        .btn-correct { background: #28a745; color: white; }
+        .btn-incorrect { background: #dc3545; color: white; }
+        .btn-review { background: #ffc107; color: black; }
+        .status {
+            margin: 10px 0;
+            padding: 5px;
+            border-radius: 3px;
+            display: none;
+        }
+        .save-results {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: #007acc;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>🎨 HyperTools Three.js Visual Verification</h1>
+        <p>Please review each figure and provide feedback on its appearance</p>
+        <p><strong>Date:</strong> 2025-06-14 16:56:39</p>
+        <p><strong>Total Figures:</strong> 10</p>
+    </div>
+    
+    <button class="save-results" onclick="saveResults()">💾 Save Test Results</button>
+
+    <div class="figure-container" id="figure-0">
+        <div class="figure-title">Figure 1: 2D Scatter Plot (red circles)</div>
+        
+        <div class="figure-info">
+            
+            <strong>Data:</strong> Shape: (50, 2), Columns: ['x', 'y'], 
+            Dimensionality: 2d
+            <br>
+            
+            <strong>Style:</strong> Color: #440256, Line: solid, 
+            Marker: circle, Width: 2, Size: 8, 
+            Alpha: 0.7
+            
+        </div>
+        
+        <div class="figure-widget">
+            <div>Error extracting renderer: 'Renderer' object has no attribute '_repr_html_'</div>
+        </div>
+        
+        <div class="feedback-section">
+            <p><strong>How does this figure look?</strong></p>
+            <div class="feedback-buttons">
+                <button class="btn btn-correct" onclick="setFeedback(0, 'correct')">
+                    ✅ Looks Correct
+                </button>
+                <button class="btn btn-incorrect" onclick="setFeedback(0, 'incorrect')">
+                    ❌ Has Issues
+                </button>
+                <button class="btn btn-review" onclick="setFeedback(0, 'review')">
+                    🔍 Needs Review
+                </button>
+            </div>
+            <div class="status" id="status-0"></div>
+            <textarea id="notes-0" placeholder="Optional notes about this figure..." 
+                      style="width: 100%; margin-top: 10px; padding: 8px; border-radius: 4px; border: 1px solid #ccc;"></textarea>
+        </div>
+    </div>
+
+    <div class="figure-container" id="figure-1">
+        <div class="figure-title">Figure 2: 2D Line Plot (blue line)</div>
+        
+        <div class="figure-info">
+            
+            <strong>Data:</strong> Shape: (100, 2), Columns: ['x', 'y'], 
+            Dimensionality: 2d
+            <br>
+            
+            <strong>Style:</strong> Color: #440256, Line: solid, 
+            Marker: None, Width: 3, Size: 8, 
+            Alpha: 0.8
+            
+        </div>
+        
+        <div class="figure-widget">
+            <div>Error extracting renderer: 'Renderer' object has no attribute '_repr_html_'</div>
+        </div>
+        
+        <div class="feedback-section">
+            <p><strong>How does this figure look?</strong></p>
+            <div class="feedback-buttons">
+                <button class="btn btn-correct" onclick="setFeedback(1, 'correct')">
+                    ✅ Looks Correct
+                </button>
+                <button class="btn btn-incorrect" onclick="setFeedback(1, 'incorrect')">
+                    ❌ Has Issues
+                </button>
+                <button class="btn btn-review" onclick="setFeedback(1, 'review')">
+                    🔍 Needs Review
+                </button>
+            </div>
+            <div class="status" id="status-1"></div>
+            <textarea id="notes-1" placeholder="Optional notes about this figure..." 
+                      style="width: 100%; margin-top: 10px; padding: 8px; border-radius: 4px; border: 1px solid #ccc;"></textarea>
+        </div>
+    </div>
+
+    <div class="figure-container" id="figure-2">
+        <div class="figure-title">Figure 3: 2D Spiral (green line + circles)</div>
+        
+        <div class="figure-info">
+            
+            <strong>Data:</strong> Shape: (50, 2), Columns: ['x', 'y'], 
+            Dimensionality: 2d
+            <br>
+            
+            <strong>Style:</strong> Color: #440256, Line: solid, 
+            Marker: circle, Width: 2, Size: 6, 
+            Alpha: 0.8
+            
+        </div>
+        
+        <div class="figure-widget">
+            <div>Error extracting renderer: 'Renderer' object has no attribute '_repr_html_'</div>
+        </div>
+        
+        <div class="feedback-section">
+            <p><strong>How does this figure look?</strong></p>
+            <div class="feedback-buttons">
+                <button class="btn btn-correct" onclick="setFeedback(2, 'correct')">
+                    ✅ Looks Correct
+                </button>
+                <button class="btn btn-incorrect" onclick="setFeedback(2, 'incorrect')">
+                    ❌ Has Issues
+                </button>
+                <button class="btn btn-review" onclick="setFeedback(2, 'review')">
+                    🔍 Needs Review
+                </button>
+            </div>
+            <div class="status" id="status-2"></div>
+            <textarea id="notes-2" placeholder="Optional notes about this figure..." 
+                      style="width: 100%; margin-top: 10px; padding: 8px; border-radius: 4px; border: 1px solid #ccc;"></textarea>
+        </div>
+    </div>
+
+    <div class="figure-container" id="figure-3">
+        <div class="figure-title">Figure 4: 3D Scatter Plot (magenta circles)</div>
+        
+        <div class="figure-info">
+            
+            <strong>Data:</strong> Shape: (40, 3), Columns: ['x', 'y', 'z'], 
+            Dimensionality: 3d
+            <br>
+            
+            <strong>Style:</strong> Color: #440256, Line: solid, 
+            Marker: circle, Width: 2, Size: 10, 
+            Alpha: 0.8
+            
+        </div>
+        
+        <div class="figure-widget">
+            <div>Error extracting renderer: 'Renderer' object has no attribute '_repr_html_'</div>
+        </div>
+        
+        <div class="feedback-section">
+            <p><strong>How does this figure look?</strong></p>
+            <div class="feedback-buttons">
+                <button class="btn btn-correct" onclick="setFeedback(3, 'correct')">
+                    ✅ Looks Correct
+                </button>
+                <button class="btn btn-incorrect" onclick="setFeedback(3, 'incorrect')">
+                    ❌ Has Issues
+                </button>
+                <button class="btn btn-review" onclick="setFeedback(3, 'review')">
+                    🔍 Needs Review
+                </button>
+            </div>
+            <div class="status" id="status-3"></div>
+            <textarea id="notes-3" placeholder="Optional notes about this figure..." 
+                      style="width: 100%; margin-top: 10px; padding: 8px; border-radius: 4px; border: 1px solid #ccc;"></textarea>
+        </div>
+    </div>
+
+    <div class="figure-container" id="figure-4">
+        <div class="figure-title">Figure 5: 3D Helix (red line)</div>
+        
+        <div class="figure-info">
+            
+            <strong>Data:</strong> Shape: (120, 3), Columns: ['x', 'y', 'z'], 
+            Dimensionality: 3d
+            <br>
+            
+            <strong>Style:</strong> Color: #440256, Line: solid, 
+            Marker: None, Width: 4, Size: 8, 
+            Alpha: 0.8
+            
+        </div>
+        
+        <div class="figure-widget">
+            <div>Error extracting renderer: 'Renderer' object has no attribute '_repr_html_'</div>
+        </div>
+        
+        <div class="feedback-section">
+            <p><strong>How does this figure look?</strong></p>
+            <div class="feedback-buttons">
+                <button class="btn btn-correct" onclick="setFeedback(4, 'correct')">
+                    ✅ Looks Correct
+                </button>
+                <button class="btn btn-incorrect" onclick="setFeedback(4, 'incorrect')">
+                    ❌ Has Issues
+                </button>
+                <button class="btn btn-review" onclick="setFeedback(4, 'review')">
+                    🔍 Needs Review
+                </button>
+            </div>
+            <div class="status" id="status-4"></div>
+            <textarea id="notes-4" placeholder="Optional notes about this figure..." 
+                      style="width: 100%; margin-top: 10px; padding: 8px; border-radius: 4px; border: 1px solid #ccc;"></textarea>
+        </div>
+    </div>
+
+    <div class="figure-container" id="figure-5">
+        <div class="figure-title">Figure 6: Multiple Datasets (sin, cos, sin*cos)</div>
+        
+        <div class="figure-info">
+            
+            <strong>Data:</strong> Shape: (80, 2), Columns: ['x', 'y'], 
+            Dimensionality: 2d
+            <br>
+            
+            <strong>Style:</strong> Color: #3b528b, Line: solid, 
+            Marker: None, Width: 2, Size: 8, 
+            Alpha: 0.8
+            
+        </div>
+        
+        <div class="figure-widget">
+            <div>Error extracting renderer: 'Renderer' object has no attribute '_repr_html_'</div>
+        </div>
+        
+        <div class="feedback-section">
+            <p><strong>How does this figure look?</strong></p>
+            <div class="feedback-buttons">
+                <button class="btn btn-correct" onclick="setFeedback(5, 'correct')">
+                    ✅ Looks Correct
+                </button>
+                <button class="btn btn-incorrect" onclick="setFeedback(5, 'incorrect')">
+                    ❌ Has Issues
+                </button>
+                <button class="btn btn-review" onclick="setFeedback(5, 'review')">
+                    🔍 Needs Review
+                </button>
+            </div>
+            <div class="status" id="status-5"></div>
+            <textarea id="notes-5" placeholder="Optional notes about this figure..." 
+                      style="width: 100%; margin-top: 10px; padding: 8px; border-radius: 4px; border: 1px solid #ccc;"></textarea>
+        </div>
+    </div>
+
+    <div class="figure-container" id="figure-6">
+        <div class="figure-title">Figure 7: Dashed Line Style</div>
+        
+        <div class="figure-info">
+            
+            <strong>Data:</strong> Shape: (50, 2), Columns: ['x', 'y'], 
+            Dimensionality: 2d
+            <br>
+            
+            <strong>Style:</strong> Color: #440256, Line: dashed, 
+            Marker: None, Width: 3, Size: 8, 
+            Alpha: 0.8
+            
+        </div>
+        
+        <div class="figure-widget">
+            <div>Error extracting renderer: 'Renderer' object has no attribute '_repr_html_'</div>
+        </div>
+        
+        <div class="feedback-section">
+            <p><strong>How does this figure look?</strong></p>
+            <div class="feedback-buttons">
+                <button class="btn btn-correct" onclick="setFeedback(6, 'correct')">
+                    ✅ Looks Correct
+                </button>
+                <button class="btn btn-incorrect" onclick="setFeedback(6, 'incorrect')">
+                    ❌ Has Issues
+                </button>
+                <button class="btn btn-review" onclick="setFeedback(6, 'review')">
+                    🔍 Needs Review
+                </button>
+            </div>
+            <div class="status" id="status-6"></div>
+            <textarea id="notes-6" placeholder="Optional notes about this figure..." 
+                      style="width: 100%; margin-top: 10px; padding: 8px; border-radius: 4px; border: 1px solid #ccc;"></textarea>
+        </div>
+    </div>
+
+    <div class="figure-container" id="figure-7">
+        <div class="figure-title">Figure 8: Single Point (auto-converted to marker)</div>
+        
+        <div class="figure-info">
+            
+            <strong>Data:</strong> Shape: (1, 2), Columns: ['x', 'y'], 
+            Dimensionality: 2d
+            <br>
+            
+            <strong>Style:</strong> Color: #440256, Line: None, 
+            Marker: o, Width: 2, Size: 15, 
+            Alpha: 0.8
+            
+        </div>
+        
+        <div class="figure-widget">
+            <div>Error extracting renderer: 'Renderer' object has no attribute '_repr_html_'</div>
+        </div>
+        
+        <div class="feedback-section">
+            <p><strong>How does this figure look?</strong></p>
+            <div class="feedback-buttons">
+                <button class="btn btn-correct" onclick="setFeedback(7, 'correct')">
+                    ✅ Looks Correct
+                </button>
+                <button class="btn btn-incorrect" onclick="setFeedback(7, 'incorrect')">
+                    ❌ Has Issues
+                </button>
+                <button class="btn btn-review" onclick="setFeedback(7, 'review')">
+                    🔍 Needs Review
+                </button>
+            </div>
+            <div class="status" id="status-7"></div>
+            <textarea id="notes-7" placeholder="Optional notes about this figure..." 
+                      style="width: 100%; margin-top: 10px; padding: 8px; border-radius: 4px; border: 1px solid #ccc;"></textarea>
+        </div>
+    </div>
+
+    <div class="figure-container" id="figure-8">
+        <div class="figure-title">Figure 9: High-dim Data (8D→3D auto-reduction)</div>
+        
+        <div class="figure-info">
+            
+            <strong>Data:</strong> Shape: (30, 3), Columns: ['x', 'y', 'z'], 
+            Dimensionality: 3d
+            <br>
+            
+            <strong>Style:</strong> Color: #440256, Line: solid, 
+            Marker: None, Width: 2, Size: 8, 
+            Alpha: 0.8
+            
+        </div>
+        
+        <div class="figure-widget">
+            <div>Error extracting renderer: 'Renderer' object has no attribute '_repr_html_'</div>
+        </div>
+        
+        <div class="feedback-section">
+            <p><strong>How does this figure look?</strong></p>
+            <div class="feedback-buttons">
+                <button class="btn btn-correct" onclick="setFeedback(8, 'correct')">
+                    ✅ Looks Correct
+                </button>
+                <button class="btn btn-incorrect" onclick="setFeedback(8, 'incorrect')">
+                    ❌ Has Issues
+                </button>
+                <button class="btn btn-review" onclick="setFeedback(8, 'review')">
+                    🔍 Needs Review
+                </button>
+            </div>
+            <div class="status" id="status-8"></div>
+            <textarea id="notes-8" placeholder="Optional notes about this figure..." 
+                      style="width: 100%; margin-top: 10px; padding: 8px; border-radius: 4px; border: 1px solid #ccc;"></textarea>
+        </div>
+    </div>
+
+    <div class="figure-container" id="figure-9">
+        <div class="figure-title">Figure 10: Triangle Markers</div>
+        
+        <div class="figure-info">
+            
+            <strong>Data:</strong> Shape: (20, 2), Columns: ['x', 'y'], 
+            Dimensionality: 2d
+            <br>
+            
+            <strong>Style:</strong> Color: #440256, Line: solid, 
+            Marker: triangle_up, Width: 2, Size: 12, 
+            Alpha: 0.8
+            
+        </div>
+        
+        <div class="figure-widget">
+            <div>Error extracting renderer: 'Renderer' object has no attribute '_repr_html_'</div>
+        </div>
+        
+        <div class="feedback-section">
+            <p><strong>How does this figure look?</strong></p>
+            <div class="feedback-buttons">
+                <button class="btn btn-correct" onclick="setFeedback(9, 'correct')">
+                    ✅ Looks Correct
+                </button>
+                <button class="btn btn-incorrect" onclick="setFeedback(9, 'incorrect')">
+                    ❌ Has Issues
+                </button>
+                <button class="btn btn-review" onclick="setFeedback(9, 'review')">
+                    🔍 Needs Review
+                </button>
+            </div>
+            <div class="status" id="status-9"></div>
+            <textarea id="notes-9" placeholder="Optional notes about this figure..." 
+                      style="width: 100%; margin-top: 10px; padding: 8px; border-radius: 4px; border: 1px solid #ccc;"></textarea>
+        </div>
+    </div>
+
+    <script>
+        let feedback = {};
+        
+        function setFeedback(figureId, status) {
+            feedback[figureId] = {
+                status: status,
+                notes: document.getElementById(`notes-${figureId}`).value,
+                timestamp: new Date().toISOString()
+            };
+            
+            const statusDiv = document.getElementById(`status-${figureId}`);
+            statusDiv.style.display = 'block';
+            
+            if (status === 'correct') {
+                statusDiv.style.background = '#d4edda';
+                statusDiv.style.color = '#155724';
+                statusDiv.textContent = '✅ Marked as correct';
+            } else if (status === 'incorrect') {
+                statusDiv.style.background = '#f8d7da';
+                statusDiv.style.color = '#721c24';
+                statusDiv.textContent = '❌ Marked as having issues';
+            } else if (status === 'review') {
+                statusDiv.style.background = '#fff3cd';
+                statusDiv.style.color = '#856404';
+                statusDiv.textContent = '🔍 Marked for review';
+            }
+            
+            console.log('Feedback updated:', feedback);
+        }
+        
+        function saveResults() {
+            const results = {
+                timestamp: new Date().toISOString(),
+                feedback: feedback,
+                summary: {
+                    total: Object.keys(feedback).length,
+                    correct: Object.values(feedback).filter(f => f.status === 'correct').length,
+                    incorrect: Object.values(feedback).filter(f => f.status === 'incorrect').length,
+                    review: Object.values(feedback).filter(f => f.status === 'review').length
+                }
+            };
+            
+            // Create downloadable JSON
+            const dataStr = JSON.stringify(results, null, 2);
+            const dataBlob = new Blob([dataStr], {type: 'application/json'});
+            const url = URL.createObjectURL(dataBlob);
+            
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = 'hypertools_visual_feedback.json';
+            link.click();
+            
+            alert(`Results saved! Summary: ${results.summary.correct} correct, ${results.summary.incorrect} incorrect, ${results.summary.review} review`);
+        }
+        
+        // Auto-save to localStorage
+        setInterval(() => {
+            if (Object.keys(feedback).length > 0) {
+                localStorage.setItem('hypertools_feedback', JSON.stringify(feedback));
+            }
+        }, 5000);
+        
+        // Load previous feedback on page load
+        window.onload = () => {
+            const saved = localStorage.getItem('hypertools_feedback');
+            if (saved) {
+                feedback = JSON.parse(saved);
+                console.log('Loaded previous feedback:', feedback);
+            }
+        };
+    </script>
+</body>
+</html>

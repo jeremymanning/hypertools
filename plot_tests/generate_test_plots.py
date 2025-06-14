@@ -153,11 +153,26 @@ def generate_test_data():
         t/4
     ])
     
+    # Animation test data - time series with index
+    n_timepoints = 15
+    anim_data = []
+    for i in range(n_timepoints):
+        # Create evolving data over time
+        x = np.random.randn(30) + np.sin(i/3) * 2
+        y = np.random.randn(30) + np.cos(i/3) * 2  
+        z = np.random.randn(30) + i * 0.1
+        
+        df = pd.DataFrame({'x': x, 'y': y, 'z': z}, index=[i] * 30)
+        anim_data.append(df)
+    
+    data_timeseries = pd.concat(anim_data)
+    
     return {
         'basic_3d': data_3d,
         'groups': data_groups,
         'high_dim': data_high_dim,
-        'spiral': data_spiral
+        'spiral': data_spiral,
+        'timeseries': data_timeseries
     }
 
 
@@ -266,6 +281,47 @@ def main():
         )
     except Exception as e:
         print(f"Skipping save test due to error: {e}")
+    
+    # Test 11: Basic Line Animation
+    try:
+        suite.add_plot(
+            "✅ FIXED: Interpolated Sliding Window",
+            "🚀 NEW: Line plot with smooth interpolation - should show continuous smooth motion, no more jerky discrete jumps",
+            hyp.plot,
+            test_data['timeseries'],
+            animate='window',
+            mode='lines',
+            duration=3,
+            framerate=20
+        )
+    except Exception as e:
+        print(f"Skipping line animation test due to error: {e}")
+    
+    # Test 12: Precognitive Line Animation  
+    try:
+        suite.add_plot(
+            "Precognitive Line Animation",
+            "🔄 Line plot with precognitive trail (window + transparent future) - may need fixes based on sliding window improvements",
+            hyp.plot,
+            test_data['timeseries'],
+            animate='precog',
+            mode='lines'
+        )
+    except Exception as e:
+        print(f"Skipping precog line animation test due to error: {e}")
+    
+    # Test 13: Spinning Animation
+    try:
+        suite.add_plot(
+            "Spinning Camera Animation",
+            "3D plot with rotating camera view - should smoothly rotate around data",
+            hyp.plot,
+            test_data['basic_3d'],
+            animate=True,
+            rotations=2
+        )
+    except Exception as e:
+        print(f"Skipping spinning animation test due to error: {e}")
     
     # Generate HTML report
     print("\nGenerating HTML report...")

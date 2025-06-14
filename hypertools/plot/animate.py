@@ -66,23 +66,22 @@ class Animator:
 
         # union of unique indices
         indices = list(index_vals)
-
-        # For line plots, use discrete timepoints with proper mapping for sliding windows
-        # For scatter plots, use the actual discrete timepoints
         unique_indices = sorted(list(set(indices)))
-        
+
+        # NEW: For line plots with sliding window, create interpolated data
         if self.opts.get('mode', 'markers') == 'lines' and self.style == 'window':
-            # For sliding window line animations, map interpolated frames to actual data ranges
-            # This creates smooth progression through real timepoints
-            n_frames = self.duration * self.framerate + 1
-            # Map frames to actual time ranges that span data points
-            self.indices = np.linspace(unique_indices[0], unique_indices[-1], n_frames)
-            # Store discrete indices for window calculations
+            print("Creating interpolated trajectory for smooth line animation...")
+            self.interpolated_data, self.interp_times = self._create_interpolated_trajectory(
+                self.data, unique_indices, self.duration * self.framerate + 1
+            )
+            self.indices = self.interp_times
             self.discrete_indices = np.array(unique_indices)
+            self.use_interpolation = True
         else:
             # For other animations, use discrete timepoints
             self.indices = np.array(unique_indices)
             self.discrete_indices = self.indices
+            self.use_interpolation = False
         
         n_frames = len(self.indices)
         print(f"Animation: {self.opts.get('mode', 'markers')} mode -> {n_frames} frames")
@@ -291,8 +290,14 @@ class Animator:
         if type(x) is list:
             return [self.get_window(i, w_start, w_end) for i in x]
 
+        # NEW: For interpolated line animations, use interpolated data
+        # BUT only for the main data, not for color arrays or other metadata
+        if (hasattr(self, 'use_interpolation') and self.use_interpolation and 
+            hasattr(x, 'equals') and x.equals(self.data)):
+            return self._get_interpolated_window(w_start, w_end)
+        
         # For sliding window animations with interpolated indices, map to actual data timepoints
-        if hasattr(self, 'discrete_indices') and len(self.discrete_indices) != len(self.indices):
+        elif hasattr(self, 'discrete_indices') and len(self.discrete_indices) != len(self.indices):
             # Calculate which discrete timepoints should be included in this window
             frame_progress = int(w_end) / len(self.indices)  # 0.0 to 1.0
             
@@ -315,6 +320,118 @@ class Animator:
         # Filter data by time index
         mask = (x.index >= start_time) & (x.index <= end_time)
         return x[mask]
+
+    def _get_interpolated_window(self, w_start, w_end):
+        """Get sliding window from interpolated trajectory data"""
+        
+        # Determine current frame and window size
+        current_frame = int(w_end)
+        window_size = max(1, int(len(self.indices) * self.focused / self.duration))
+        
+        # Calculate window range in interpolated frames
+        window_start_frame = max(0, current_frame - window_size + 1)
+        window_end_frame = current_frame + 1
+        
+        # Get interpolated data for this window
+        window_data = self.interpolated_data[
+            (self.interpolated_data.frame >= window_start_frame) & 
+            (self.interpolated_data.frame < window_end_frame)
+        ]
+        
+        if window_data.empty:
+            # Return empty dataframe with correct columns
+            return pd.DataFrame(columns=['x', 'y'] if 'z' not in self.interpolated_data.columns else ['x', 'y', 'z'])
+        
+        # CRITICAL FIX: For line plots, we need to create a single continuous trajectory
+        # Group by frame and coordinate, then order properly for continuous lines
+        
+        # Get the coordinate columns
+        coord_cols = ['x', 'y'] if 'z' not in window_data.columns else ['x', 'y', 'z']
+        
+        # Create continuous trajectory by ordering points by time for each coordinate
+        trajectory_points = []
+        
+        # Sort by time and coord_id to ensure proper ordering
+        sorted_data = window_data.sort_values(['time', 'coord_id'])
+        
+        # For a line plot, we want to connect all points of the same coordinate through time
+        for coord_id in sorted_data['coord_id'].unique():
+            coord_data = sorted_data[sorted_data['coord_id'] == coord_id]
+            
+            for _, row in coord_data.iterrows():
+                trajectory_points.append({
+                    col: row[col] for col in coord_cols
+                })
+        
+        # Convert to DataFrame with sequential index (no grouping by coordinates)
+        result_df = pd.DataFrame(trajectory_points)
+        
+        # Use sequential numeric index for line connectivity
+        result_df.index = range(len(result_df))
+        
+        return result_df
+
+    def _create_interpolated_trajectory(self, data, timepoints, n_frames):
+        """Create interpolated trajectory for smooth line animations"""
+        from scipy.interpolate import interp1d
+        
+        # Handle list of dataframes or single dataframe
+        if type(data) is list:
+            # For now, focus on single trajectory case
+            data = data[0] if len(data) == 1 else pd.concat(data)
+        
+        print(f"Interpolating trajectory: {len(timepoints)} timepoints -> {n_frames} frames")
+        
+        # Group data by timepoint to get coordinate sets
+        timepoint_data = {}
+        for t in timepoints:
+            subset = data[data.index == t]
+            if not subset.empty:
+                timepoint_data[t] = subset[['x', 'y', 'z'] if 'z' in subset.columns else ['x', 'y']].values
+        
+        # Number of coordinates per timepoint
+        n_coords = len(timepoint_data[timepoints[0]])
+        n_dims = timepoint_data[timepoints[0]].shape[1]
+        
+        # Create interpolated timeline
+        interp_times = np.linspace(timepoints[0], timepoints[-1], n_frames)
+        
+        # Interpolate each coordinate's trajectory through time
+        interpolated_data = []
+        
+        for coord_idx in range(n_coords):
+            # Extract this coordinate's path through time
+            coord_paths = []
+            for dim in range(n_dims):
+                path = [timepoint_data[t][coord_idx, dim] for t in timepoints]
+                coord_paths.append(path)
+            
+            # Create interpolation functions for each dimension
+            interp_functions = []
+            for dim in range(n_dims):
+                interp_func = interp1d(timepoints, coord_paths[dim], kind='linear', 
+                                     bounds_error=False, fill_value='extrapolate')
+                interp_functions.append(interp_func)
+            
+            # Generate smooth interpolated values
+            for i, t in enumerate(interp_times):
+                coord_data = {
+                    'time': t,
+                    'frame': i,
+                    'coord_id': coord_idx
+                }
+                
+                # Add interpolated coordinates
+                dim_names = ['x', 'y', 'z'][:n_dims]
+                for dim, name in enumerate(dim_names):
+                    coord_data[name] = interp_functions[dim](t)
+                
+                interpolated_data.append(coord_data)
+        
+        interpolated_df = pd.DataFrame(interpolated_data)
+        print(f"Created interpolated trajectory: {len(interpolated_df)} total points")
+        
+        return interpolated_df, interp_times
 
     @classmethod
     def get_datadict(cls, data, mode='markers', **kwargs):

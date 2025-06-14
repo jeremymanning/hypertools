@@ -5,8 +5,7 @@ import numpy as np
 import pandas as pd
 import seaborn as sns
 import matplotlib as mpl
-import plotly.graph_objects as go
-import plotly.io as pio
+# Plotly imports removed - using Three.js backend only
 
 import sys
 
@@ -18,25 +17,13 @@ from ..cluster import cluster
 from ..manip import manip
 from ..reduce import reduce
 
-from .static import static_plot, group_mean, match_color, mpl2plotly_color, plot_bounding_box, get_bounds,\
-    get_empty_canvas
-from .animate import Animator
+# Removed Plotly-specific imports
+from ..core.threejs_backend import HyperToolsFigure, mat2colors_threejs, labels2colors_threejs
 
 defaults = get_default_options()
 
 
-def get_env():
-    if 'ipykernel_launcher.py' in sys.argv[0]:
-        return 'jupyter'
-    else:
-        return 'python'
-
-
-def update_plotly_renderer(backend=None):
-    if (backend is None) and (get_env() == 'python'):
-        pio.renderers.default = 'browser'
-    elif backend is not None:
-        pio.renderers.default = backend
+# Plotly-specific functions removed - using Three.js only
 
 
 def get_cmap(cmap, **kwargs):
@@ -438,9 +425,8 @@ def plot(original_data, *fmt, **kwargs):
     clusterers = kwargs.pop('cluster', None)
     post = kwargs.pop('post', None)
 
+    # Format string validation - handled by Three.js backend
     assert len(fmt) == 0 or len(fmt) == 1 or len(fmt) == len(data), ValueError(f'invalid format: {fmt}')
-    if len(fmt) == 1:
-        kwargs = dw.core.update_dict(parse_style(fmt[0]), kwargs)
 
     if pipeline is not None:
         data = apply_model(data, model=pipeline)
@@ -457,28 +443,52 @@ def plot(original_data, *fmt, **kwargs):
     if post is not None:
         data = manip(data, model=post)
 
+    # Color handling for Three.js backend
     cmap = kwargs.pop('cmap', eval(defaults['plot']['cmap']))
     color_kwargs = kwargs.pop('color_kwargs', kwargs)
-    
-    # Handle 'hue' parameter for plotly compatibility
     hue = kwargs.pop('hue', None)
+    
+    # Check if any format string specifies color (to avoid overriding it)
+    format_has_color = False
+    if len(fmt) > 0:
+        # Handle case where fmt might be a tuple containing a list: (['r-', 'b--'],)
+        fmt_to_check = fmt[0] if len(fmt) == 1 and isinstance(fmt[0], list) else fmt
+        
+        # Check all format strings for color specification
+        for fmt_str in fmt_to_check:
+            if fmt_str and isinstance(fmt_str, str) and any(c in fmt_str for c in 'rgbcmykw'):
+                format_has_color = True
+                break
+    
+    # ✅ RESTORED: Full color mapping functionality for Three.js backend
+    # Using Three.js-compatible versions of mat2colors and labels2colors
     
     if clusterers is not None:
         cluster_labels = cluster(data, model=clusterers)
-        colors, kwargs['legend_override'] = labels2colors(cluster_labels, cmap=cmap,
-                                                          **dw.core.update_dict(kwargs, color_kwargs))
+        colors, label_mapping = labels2colors_threejs(cluster_labels, cmap=cmap, **color_kwargs)
+        kwargs['color'] = colors
+        kwargs['cluster_labels'] = cluster_labels
+        kwargs['cluster_mapping'] = label_mapping
     elif hue is not None:
         # Convert hue labels to colors
-        colors, kwargs['legend_override'] = labels2colors(hue, cmap=cmap,
-                                                          **dw.core.update_dict(kwargs, color_kwargs))
+        colors, label_mapping = labels2colors_threejs(hue, cmap=cmap, **color_kwargs)
+        kwargs['color'] = colors  
+        kwargs['hue_labels'] = hue
+        kwargs['hue_mapping'] = label_mapping
     else:
-        if 'color' not in kwargs.keys() or kwargs['color'] is None:
-            colors = get_colors(data)
-        else:
-            colors = kwargs.pop('color', ValueError('error parsing color argument'))
-
-        colors = mat2colors(colors, cmap=cmap, **color_kwargs)
-    kwargs['color'] = colors
+        # Only apply automatic color assignment if no explicit color AND no format string color
+        if ('color' not in kwargs.keys() or kwargs['color'] is None) and not format_has_color:
+            # Use automatic color assignment based on data
+            if type(data) is list and len(data) > 1:
+                # Multiple datasets - assign different colors
+                import seaborn as sns
+                palette = sns.color_palette(cmap, n_colors=len(data))
+                from ..core.threejs_backend import rgb_to_hex
+                kwargs['color'] = [rgb_to_hex(palette[i]) for i in range(len(data))]
+            else:
+                # Single dataset - use data-driven coloring
+                colors = get_colors(data)
+                kwargs['color'] = mat2colors_threejs(colors, cmap=cmap, **color_kwargs)
 
     if type(data) is list:
         # Only pad to the maximum dimensionality present in the data
@@ -490,29 +500,39 @@ def plot(original_data, *fmt, **kwargs):
     if type(data) is list and len(set([d.shape[1] for d in data])) > 1:
         data = pad(data, c)
 
-    renderer = kwargs.pop('renderer', None)
-    update_plotly_renderer(backend=renderer)
-
-    fig = kwargs.pop('fig', get_empty_canvas())
-    kwargs['fig'] = fig
+    # Always use Three.js backend - convert data to appropriate format
+    if type(data) is not list:
+        data = [data]  # Ensure data is a list for multiple dataset support
+    
+    # Extract Three.js specific parameters
+    threejs_kwargs = {}
+    for key in ['linewidth', 'markersize', 'alpha', 'interpolation_samples']:
+        if key in kwargs:
+            threejs_kwargs[key] = kwargs.pop(key)
+    
+    # Handle color parameter
+    if 'color' in kwargs:
+        threejs_kwargs['color'] = kwargs.pop('color')
+    
+    # Handle animation parameter
     animate = kwargs.pop('animate', None)
-
     if animate is not None:
-        if type(animate) is str:
-            kwargs['style'] = animate
-
-        return Animator(data, **kwargs).build_animation()
-
-    bounding_box = kwargs.pop('bounding_box', False)
-    if bounding_box:
-        kwargs['fig'] = plot_bounding_box(get_bounds(data), fig=kwargs['fig'])
+        threejs_kwargs['animate'] = animate
     
     # Handle save_path parameter
     save_path = kwargs.pop('save_path', None)
-    fig = static_plot(data, **kwargs)
     
+    # Create HyperToolsFigure with matplotlib-style API - pass full fmt list
+    # Handle case where fmt might be a tuple containing a list: (['r-', 'b--'],)
+    if fmt:
+        fmt_list = fmt[0] if len(fmt) == 1 and isinstance(fmt[0], list) else list(fmt)
+    else:
+        fmt_list = None
+    
+    fig = HyperToolsFigure(data, fmt=fmt_list, **threejs_kwargs, **kwargs)
+    
+    # Handle saving if requested
     if save_path is not None:
-        from .print import hypersave
-        hypersave(fig, save_path)
+        fig.export(save_path)
     
     return fig
