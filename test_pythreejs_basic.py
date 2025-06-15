@@ -1,105 +1,145 @@
-#!/usr/bin/env python3
+#\!/usr/bin/env python3
 """
-Basic pythreejs functionality test
+Basic pythreejs functionality test to verify the widget system works
 """
 
-import numpy as np
 import pythreejs as p3js
+import numpy as np
+import time
 
-def test_pythreejs_basic():
-    """Test basic pythreejs functionality"""
-    print("=== TESTING PYTHREEJS BASIC FUNCTIONALITY ===")
-
+def test_basic_pythreejs():
+    """Test if pythreejs can create basic objects"""
+    print("Testing basic pythreejs functionality...")
+    
     try:
-        # Test basic Three.js object creation
-        print("1. Testing basic object creation...")
+        # Create a basic scene
+        scene = p3js.Scene()
+        print("✅ Scene created successfully")
         
-        # Create geometry
-        geometry = p3js.SphereGeometry(radius=1, widthSegments=32, heightSegments=24)
-        print(f"   ✅ Geometry created: {type(geometry)}")
+        # Create a camera
+        camera = p3js.PerspectiveCamera(fov=75, aspect=1.0, near=0.1, far=1000)
+        camera.position = [0, 0, 5]
+        print("✅ Camera created successfully")
         
-        # Create material
-        material = p3js.MeshLambertMaterial(color='red')
-        print(f"   ✅ Material created: {type(material)}")
-        
-        # Create mesh
-        sphere = p3js.Mesh(geometry=geometry, material=material)
-        print(f"   ✅ Mesh created: {type(sphere)}")
-        
-        # Create light
-        light = p3js.AmbientLight(color='#777777')
-        print(f"   ✅ Light created: {type(light)}")
-        
-        # Create scene
-        scene = p3js.Scene(children=[sphere, light])
-        print(f"   ✅ Scene created: {type(scene)}")
-        
-        # Create camera
-        camera = p3js.PerspectiveCamera(position=[0, 5, 5], up=[0, 1, 0])
-        print(f"   ✅ Camera created: {type(camera)}")
+        # Create a simple cube geometry
+        geometry = p3js.BoxGeometry(width=1, height=1, depth=1)
+        material = p3js.MeshBasicMaterial(color='red')
+        cube = p3js.Mesh(geometry=geometry, material=material)
+        scene.add(cube)
+        print("✅ Cube mesh created and added to scene")
         
         # Create renderer
-        renderer = p3js.Renderer(camera=camera, scene=scene, 
-                                controls=[p3js.OrbitControls(controlling=camera)])
-        print(f"   ✅ Renderer created: {type(renderer)}")
-        
-        print("\n2. Testing data conversion...")
-        
-        # Test data handling
-        test_data = np.random.rand(100, 3)
-        positions = test_data.flatten()
-        
-        # Create buffer geometry from data
-        buffer_geometry = p3js.BufferGeometry(
-            attributes={'position': p3js.BufferAttribute(array=positions, itemSize=3)}
+        renderer = p3js.Renderer(
+            camera=camera,
+            scene=scene,
+            controls=[p3js.OrbitControls(controlling=camera)],
+            width=400,
+            height=300
         )
-        print(f"   ✅ BufferGeometry created from data: {type(buffer_geometry)}")
+        print("✅ Renderer created successfully")
         
-        # Create points material
-        points_material = p3js.PointsMaterial(color='blue', size=0.1)
-        points = p3js.Points(geometry=buffer_geometry, material=points_material)
-        print(f"   ✅ Points object created: {type(points)}")
+        # Test position arrays (like our data points)
+        positions = np.array([
+            1.0, 2.0, 0.0,  # Point 1
+            -1.0, -2.0, 0.0,  # Point 2
+            0.0, 0.0, 1.0   # Point 3
+        ], dtype=np.float32)
         
-        print("\n3. Testing 2D setup...")
-        
-        # Test orthographic camera for 2D
-        ortho_camera = p3js.OrthographicCamera(
-            left=-5, right=5, top=5, bottom=-5, near=0.1, far=1000
+        point_geometry = p3js.BufferGeometry(
+            attributes={
+                'position': p3js.BufferAttribute(
+                    array=positions,
+                    itemSize=3
+                )
+            }
         )
-        ortho_camera.position = [0, 0, 1]
-        print(f"   ✅ Orthographic camera created: {type(ortho_camera)}")
+        point_material = p3js.PointsMaterial(color='blue', size=0.1)
+        points = p3js.Points(geometry=point_geometry, material=point_material)
+        scene.add(points)
+        print("✅ Points geometry created successfully")
         
-        print("\n4. Testing line geometry...")
+        print("\n🎯 pythreejs basic functionality test: PASSED")
+        print("📋 Renderer object ready for display")
         
-        # Create line for 2D/3D plotting
-        line_points = np.array([[0, 0, 0], [1, 1, 0], [2, 0, 0]])
-        line_positions = line_points.flatten()
-        
-        line_geometry = p3js.BufferGeometry(
-            attributes={'position': p3js.BufferAttribute(array=line_positions, itemSize=3)}
-        )
-        line_material = p3js.LineBasicMaterial(color='green')
-        line = p3js.Line(geometry=line_geometry, material=line_material)
-        print(f"   ✅ Line created: {type(line)}")
-        
-        print("\n✅ ALL TESTS PASSED - pythreejs is working correctly!")
-        print("Ready to begin HyperTools Three.js backend implementation.")
-        
-        # Return a test renderer for potential display
-        test_scene = p3js.Scene(children=[sphere, points, line, light])
-        test_renderer = p3js.Renderer(camera=camera, scene=test_scene,
-                                     controls=[p3js.OrbitControls(controlling=camera)])
-        
-        print(f"\n🎯 Test renderer ready: {type(test_renderer)}")
-        print("   (Can be displayed in Jupyter notebook)")
-        
-        return test_renderer
+        return renderer
         
     except Exception as e:
-        print(f"❌ FAILED: {e}")
+        print(f"❌ pythreejs test failed: {e}")
+        import traceback
+        traceback.print_exc()
+        return None
+
+def test_2d_positions():
+    """Test the specific case causing issues: 2D positions with Z=0"""
+    print("\nTesting 2D position handling...")
+    
+    try:
+        # Simulate our 2D data conversion
+        data_2d = np.array([
+            [1.5, -2.3],
+            [0.5, 1.2], 
+            [-1.0, 0.8],
+            [2.0, -0.5]
+        ])
+        
+        # Convert to 3D positions like our code does
+        positions_3d = np.column_stack([
+            data_2d[:, 0],  # x
+            data_2d[:, 1],  # y  
+            np.zeros(len(data_2d))  # z = 0
+        ])
+        
+        positions_flat = positions_3d.flatten().astype(np.float32)
+        
+        print(f"Original 2D data shape: {data_2d.shape}")
+        print(f"Original 2D data:\n{data_2d}")
+        print(f"3D positions shape: {positions_3d.shape}")
+        print(f"3D positions:\n{positions_3d}")
+        print(f"Flattened positions shape: {positions_flat.shape}")
+        print(f"Flattened positions: {positions_flat}")
+        
+        # Create geometry
+        geometry = p3js.BufferGeometry(
+            attributes={
+                'position': p3js.BufferAttribute(
+                    array=positions_flat,
+                    itemSize=3
+                )
+            }
+        )
+        
+        # Check the created attribute
+        pos_attr = geometry.attributes['position']
+        print(f"BufferAttribute array length: {len(pos_attr.array)}")
+        print(f"BufferAttribute itemSize: {pos_attr.itemSize}")
+        print(f"Expected point count: {len(pos_attr.array) / pos_attr.itemSize}")
+        
+        print("✅ 2D position conversion test: PASSED")
+        
+        return geometry
+        
+    except Exception as e:
+        print(f"❌ 2D position test failed: {e}")
         import traceback
         traceback.print_exc()
         return None
 
 if __name__ == "__main__":
-    test_pythreejs_basic()
+    print("=" * 50)
+    print("PYTHREEJS DIAGNOSTIC TEST")
+    print("=" * 50)
+    
+    # Test 1: Basic functionality
+    renderer = test_basic_pythreejs()
+    
+    # Test 2: 2D position handling
+    geometry = test_2d_positions()
+    
+    print("\n" + "=" * 50)
+    if renderer and geometry:
+        print("🎉 ALL TESTS PASSED - pythreejs is working correctly")
+        print("📝 The issue may be elsewhere (widget display, camera setup, etc.)")
+    else:
+        print("❌ TESTS FAILED - pythreejs has fundamental issues")
+    print("=" * 50)
+EOF < /dev/null
