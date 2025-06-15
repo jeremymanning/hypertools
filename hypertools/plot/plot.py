@@ -535,4 +535,18 @@ def plot(original_data, *fmt, **kwargs):
     if save_path is not None:
         fig.export(save_path)
     
+    # Auto-display in Jupyter like matplotlib does
+    try:
+        # Check if we're in a Jupyter environment
+        from IPython import get_ipython
+        ipython = get_ipython()
+        if ipython is not None and hasattr(ipython, 'kernel'):
+            # We're in Jupyter - auto-display the figure
+            from IPython.display import display
+            display(fig.show())
+            return fig  # Return the figure object, not the renderer
+    except ImportError:
+        # Not in Jupyter environment - just return the figure
+        pass
+    
     return fig

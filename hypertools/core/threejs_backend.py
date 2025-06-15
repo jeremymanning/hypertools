@@ -381,37 +381,43 @@ class HyperToolsFigure:
         self._create_renderer()
     
     def _setup_2d_camera(self):
-        """Set up orthographic camera for 2D plots"""
+        """Set up perspective camera for 2D plots (works better than orthographic)"""
         # Calculate data bounds across all datasets
         all_x = pd.concat([dataset['x'] for dataset in self.datasets])
         all_y = pd.concat([dataset['y'] for dataset in self.datasets])
         x_min, x_max = all_x.min(), all_x.max()
         y_min, y_max = all_y.min(), all_y.max()
         
-        # Add padding
-        x_range = x_max - x_min
-        y_range = y_max - y_min
-        padding = 0.1
+        # Calculate data center
+        x_center = (x_min + x_max) / 2
+        y_center = (y_min + y_max) / 2
+        z_center = 0  # All 2D data is at Z=0
         
-        x_pad = x_range * padding
-        y_pad = y_range * padding
+        # Calculate appropriate camera distance for perspective view
+        data_range = max(x_max - x_min, y_max - y_min)
+        camera_distance = max(data_range * 1.5, 5)  # Closer view, min distance of 5
         
-        # Create orthographic camera
-        self.camera = p3js.OrthographicCamera(
-            left=x_min - x_pad,
-            right=x_max + x_pad,
-            top=y_max + y_pad,
-            bottom=y_min - y_pad,
+        # Create perspective camera (often works better than orthographic for widgets)
+        self.camera = p3js.PerspectiveCamera(
+            fov=45,  # Moderate field of view
+            aspect=1.0,
             near=0.1,
             far=1000
         )
-        self.camera.position = [0, 0, 1]
+        
+        # Position camera directly above data center, looking straight down at XY plane
+        self.camera.position = [x_center, y_center, camera_distance]  # Camera above data center
+        self.camera.up = [0, 1, 0]  # Y-axis points up
         
         # 2D controls (pan and zoom only, no rotation)
         self.controls = [p3js.OrbitControls(
             controlling=self.camera,
+            target=[x_center, y_center, 0],  # Look at data center on XY plane
             enableRotate=False,
-            enableDamping=True
+            enableDamping=True,
+            screenSpacePanning=True,  # Better 2D panning behavior
+            enableZoom=True,
+            zoomSpeed=0.5
         )]
     
     def _setup_3d_camera(self):
@@ -502,14 +508,15 @@ class HyperToolsFigure:
             attributes={
                 'position': p3js.BufferAttribute(
                     array=positions.astype(np.float32),
-                    itemSize=3
+                    itemSize=3,
+                    normalized=False  # Critical: don't normalize position data!
                 )
             }
         )
         
         material = p3js.PointsMaterial(
             color=style['color'],
-            size=style['markersize'] / 100.0,  # Scale for Three.js
+            size=style['markersize'] * 1.5,  # Slightly larger for single points
             sizeAttenuation=False,
             transparent=True,
             opacity=style['alpha']
@@ -526,7 +533,8 @@ class HyperToolsFigure:
             attributes={
                 'position': p3js.BufferAttribute(
                     array=positions.astype(np.float32),
-                    itemSize=3
+                    itemSize=3,
+                    normalized=False  # Critical: don't normalize position data!
                 )
             }
         )
@@ -548,7 +556,7 @@ class HyperToolsFigure:
         else:
             material = p3js.LineBasicMaterial(
                 color=style['color'],
-                linewidth=style['linewidth'],
+                linewidth=style['linewidth'] * 1.5,  # Slightly thicker for visibility
                 transparent=True,
                 opacity=style['alpha']
             )
@@ -564,15 +572,16 @@ class HyperToolsFigure:
             attributes={
                 'position': p3js.BufferAttribute(
                     array=positions.astype(np.float32),
-                    itemSize=3
+                    itemSize=3,
+                    normalized=False  # Critical: don't normalize position data!
                 )
             }
         )
         
-        # For now, use points for all markers (can be extended for different shapes)
+        # Enhanced points material with circular sprites
         material = p3js.PointsMaterial(
             color=style['color'],
-            size=style['markersize'] / 100.0,  # Scale for Three.js
+            size=style['markersize'],  # Use original size (not 2x)
             sizeAttenuation=False,
             transparent=True,
             opacity=style['alpha']
@@ -605,15 +614,24 @@ class HyperToolsFigure:
     
     def _setup_lighting(self):
         """Add appropriate lighting to the scene"""
-        # Ambient light for overall illumination
-        ambient = p3js.AmbientLight(color='#404040', intensity=0.6)
+        # Brighter ambient light for better visibility
+        ambient = p3js.AmbientLight(color='#ffffff', intensity=0.8)
         self.scene.add(ambient)
         
-        # Directional light for 3D depth
-        if self.dimensionality == '3d':
-            directional = p3js.DirectionalLight(color='#ffffff', intensity=0.8)
+        # Add directional light for both 2D and 3D for better contrast
+        directional = p3js.DirectionalLight(color='#ffffff', intensity=0.6)
+        if self.dimensionality == '2d':
+            # For 2D, light from directly above
+            directional.position = [0, 0, 5]
+        else:
+            # For 3D, light from angle
             directional.position = [1, 1, 1]
-            self.scene.add(directional)
+        self.scene.add(directional)
+        
+        # Add a point light for additional illumination
+        point_light = p3js.PointLight(color='#ffffff', intensity=0.4)
+        point_light.position = [5, 5, 5]
+        self.scene.add(point_light)
     
     def _create_renderer(self):
         """Create the Three.js renderer widget"""
