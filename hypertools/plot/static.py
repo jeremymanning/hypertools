@@ -3,9 +3,9 @@ import datawrangler as dw
 import numpy as np
 import pandas as pd
 import seaborn as sns
-import plotly.io as pio
-import plotly.graph_objects as go
 import matplotlib as mpl
+import matplotlib.pyplot as plt
+from mpl_toolkits.mplot3d import Axes3D
 
 from ..core import get_default_options, eval_dict, get, fullfact
 
@@ -58,38 +58,45 @@ def get_continuous_inds(x):
         return [x[breaks[i]:breaks[i + 1]] for i in range(len(breaks) - 1)]
 
 
-def get_empty_canvas(fig=None, width=800, height=800):
-    if fig is None:
-        fig = go.Figure()
-        fig.update_layout(width=width, height=height)
-    fig = fig.to_dict()
+def get_empty_canvas(fig=None, ax=None, projection=None, figsize=(10, 8)):
+    """Create empty matplotlib figure and axes."""
+    if fig is None and ax is None:
+        fig = plt.figure(figsize=figsize)
+        if projection == '3d':
+            ax = fig.add_subplot(111, projection='3d')
+        else:
+            ax = fig.add_subplot(111)
+    elif ax is None:
+        if projection == '3d':
+            ax = fig.add_subplot(111, projection='3d')
+        else:
+            ax = fig.add_subplot(111)
+    elif fig is None:
+        fig = ax.figure
+    
+    # Style the axes
+    ax.set_facecolor('#F8F8F9')
+    if projection != '3d':
+        ax.spines['top'].set_visible(False)
+        ax.spines['right'].set_visible(False)
+    
+    return fig, ax
 
-    colors = ['#F8F8F9', '#F3F4F4', '#EFEFF0']
 
-    # set 3D properties
-    for i, axis in enumerate(['xaxis', 'yaxis', 'zaxis']):
-        # fig['layout']['template']['layout']['scene'][axis]['showbackground'] = False
-        # fig['layout']['template']['layout']['scene'][axis]['showgrid'] = False
-        fig['layout']['template']['layout']['scene'][axis]['backgroundcolor'] = get(colors, i)
-        fig['layout']['template']['layout']['scene'][axis]['showticklabels'] = False
-        fig['layout']['template']['layout']['scene'][axis]['title'] = ''
-
-    # set 2D properties
-    for axis in ['xaxis', 'yaxis']:
-        # fig['layout']['template']['layout'][axis]['showgrid'] = False
-        fig['layout']['template']['layout'][axis]['showticklabels'] = False
-        fig['layout']['template']['layout'][axis]['title'] = ''
-    fig['layout']['template']['layout']['plot_bgcolor'] = get(colors, 0)
-
-    return go.Figure(fig)
-
-
-def mpl2plotly_color(c):
-    if type(c) is list:
-        return [mpl2plotly_color(i) for i in c]
+def normalize_color(c):
+    """Normalize color to matplotlib format."""
+    if isinstance(c, list):
+        return [normalize_color(i) for i in c]
+    elif isinstance(c, str):
+        return c  # Already a valid color string
+    elif isinstance(c, (tuple, np.ndarray)):
+        # Ensure RGB values are in [0, 1] range
+        c = np.array(c)
+        if c.max() > 1.0:
+            c = c / 255.0
+        return mpl.colors.to_hex(c)
     else:
-        color = mpl.colors.to_rgb(c)
-        return f'rgb({color[0]}, {color[1]}, {color[2]})'
+        return c
 
 
 def get_bounds(data):
@@ -102,40 +109,42 @@ def expand_range(x, b=0.025):
     return [np.min(x) - b * length, np.max(x) + b * length]
 
 
-def plot_bounding_box(bounds, color='k', width=3, opacity=0.9, fig=None, buffer=0.025, simplify=False):
-    color = mpl2plotly_color(color)
-
+def plot_bounding_box(bounds, color='k', linewidth=2, alpha=0.9, fig=None, ax=None, buffer=0.025):
+    """Plot bounding box using matplotlib."""
     n_dims = bounds.shape[1]
-
-    # TODO: could also pass in a reduction model; if >3D, reduce to 3D prior to plotting
     assert n_dims in [2, 3], ValueError(f'only 2D or 3D coordinates are supported; given: {n_dims}D')
-
+    
+    if fig is None or ax is None:
+        fig, ax = get_empty_canvas(projection='3d' if n_dims == 3 else None)
+    
     n_vertices = np.power(2, n_dims)
-
     lengths = np.abs(np.diff(bounds, axis=0))
     vertices = fullfact(n_dims * [2]) - 1
     vertices = np.multiply(vertices, np.repeat(lengths, n_vertices, axis=0))
     vertices += np.repeat(np.atleast_2d(np.min(bounds, axis=0)), n_vertices, axis=0)
-
-    edges = []
+    
+    # Draw edges
     for i in range(n_vertices):
         for j in range(i):
-            # check for adjacent vertex (match every coordinate except 1)
+            # Check for adjacent vertex (match every coordinate except 1)
             if np.sum([a == b for a, b in zip(vertices[i], vertices[j])]) == n_dims - 1:
-                edges.append(get_plotly_shape(np.array(np.concatenate([vertices[i], vertices[j]], axis=0)),
-                                              mode='lines', showlegend=False, hoverinfo='skip', name='bounding box',
-                                              opacity=opacity, linewidth=width, color=color))
-
-    if simplify:
-        return edges
-
-    fig = get_empty_canvas(fig=fig)
-    fig.add_traces(edges)
-    if n_dims == 2:
-        fig.update_xaxes(range=expand_range(bounds[:, 0], b=buffer))
-        fig.update_yaxes(range=expand_range(bounds[:, 1], b=buffer))
-
-    return fig
+                if n_dims == 3:
+                    ax.plot([vertices[i][0], vertices[j][0]],
+                           [vertices[i][1], vertices[j][1]],
+                           [vertices[i][2], vertices[j][2]],
+                           color=color, linewidth=linewidth, alpha=alpha)
+                else:
+                    ax.plot([vertices[i][0], vertices[j][0]],
+                           [vertices[i][1], vertices[j][1]],
+                           color=color, linewidth=linewidth, alpha=alpha)
+    
+    # Set axis limits
+    ax.set_xlim(expand_range(bounds[:, 0], b=buffer))
+    ax.set_ylim(expand_range(bounds[:, 1], b=buffer))
+    if n_dims == 3:
+        ax.set_zlim(expand_range(bounds[:, 2], b=buffer))
+    
+    return fig, ax
 
 
 # noinspection PyIncorrectDocstring
@@ -166,159 +175,94 @@ def flatten(y, depth=0):
             return y
 
 
-def get_plotly_shape(x, **kwargs):
-    mode = kwargs.pop('mode', defaults['mode'])
-    color = kwargs.pop('color', defaults['color'])
-
-    width = kwargs.pop('linewidth', defaults['linewidth'])
-    size = kwargs.pop('markersize', defaults['markersize'])
-    symbol = kwargs.pop('marker', defaults['marker'])
-    edgewidth = kwargs.pop('markeredgewidth', None)
-
-    edgecolor = kwargs.pop('edgecolor', None)
-    if edgecolor is None:
-        edgecolor = color
-
-    facecolor = kwargs.pop('facecolor', None)
-    if facecolor is None:
-        facecolor = color
-
-    dash = kwargs.pop('dash', None)
-
-    shape = {}
-    if 'line' in mode:
-        shape['line'] = {'width': width, 'color': color}
-        if dash is not None:
-            shape['line']['dash'] = dash
-    if 'marker' in mode:
-        shape['marker'] = {'color': facecolor, 'size': size, 'symbol': symbol}
-        if edgewidth is not None:
-            shape['marker']['line'] = {'width': edgewidth, 'color': edgecolor}
-
-    shape['x'] = flatten(x[:, 0])
-    shape['y'] = flatten(x[:, 1])
-
+def plot_data_matplotlib(ax, x, mode='markers', color=None, linewidth=1.5, markersize=6,
+                        marker='o', linestyle='-', alpha=1.0, label=None, **kwargs):
+    """Plot data using matplotlib."""
+    x = np.asarray(x)
+    
     if x.shape[1] == 2:
-        return go.Scatter(**dw.core.update_dict(kwargs, shape), mode=mode)
+        if 'lines' in mode and 'markers' in mode:
+            ax.plot(x[:, 0], x[:, 1], color=color, linewidth=linewidth,
+                   marker=marker, markersize=markersize, linestyle=linestyle,
+                   alpha=alpha, label=label, **kwargs)
+        elif 'lines' in mode:
+            ax.plot(x[:, 0], x[:, 1], color=color, linewidth=linewidth,
+                   linestyle=linestyle, alpha=alpha, label=label, **kwargs)
+        else:  # markers
+            ax.scatter(x[:, 0], x[:, 1], c=color, s=markersize**2,
+                      marker=marker, alpha=alpha, label=label, **kwargs)
     elif x.shape[1] == 3:
-        shape['z'] = flatten(x[:, 2])
-        return go.Scatter3d(**dw.core.update_dict(kwargs, shape), mode=mode)
+        if 'lines' in mode and 'markers' in mode:
+            ax.plot(x[:, 0], x[:, 1], x[:, 2], color=color, linewidth=linewidth,
+                   marker=marker, markersize=markersize, linestyle=linestyle,
+                   alpha=alpha, label=label, **kwargs)
+        elif 'lines' in mode:
+            ax.plot(x[:, 0], x[:, 1], x[:, 2], color=color, linewidth=linewidth,
+                   linestyle=linestyle, alpha=alpha, label=label, **kwargs)
+        else:  # markers
+            ax.scatter(x[:, 0], x[:, 1], x[:, 2], c=color, s=markersize**2,
+                      marker=marker, alpha=alpha, label=label, **kwargs)
     else:
-        raise ValueError(f'data must be 2D or 3D (given: {data.shape[1]}D)')
+        raise ValueError(f'data must be 2D or 3D (given: {x.shape[1]}D)')
 
 
-def static_plot(data, **kwargs):
+def static_plot(data, fig=None, ax=None, **kwargs):
+    """Static plotting with matplotlib."""
     kwargs = dw.core.update_dict(defaults, kwargs)
-
-    fig = kwargs.pop('fig', go.Figure())
+    
+    # Extract parameters
     color = kwargs.pop('color', None)
-
-    legend_override = kwargs.pop('legend_override', None)
-    if (legend_override is not None) and ('showlegend' not in kwargs.keys() or kwargs['showlegend']):
-        for n, s in legend_override['styles'].items():
-            if (hasattr(data, 'shape') and data.shape[1] == 3) or \
-                    any([(hasattr(d, 'shape') and d.shape[1] == 3) for d in data]):
-                dummy_coords = np.atleast_2d([None, None, None])
-            else:
-                dummy_coords = np.atleast_2d([None, None])
-            fig.add_trace(get_plotly_shape(dummy_coords, **s, name=n, legendgroup=n))
-        kwargs['showlegend'] = False
-
-    if type(data) is list:
-        names = kwargs.pop('name', [str(d) for d in range(len(data))])
+    mode = kwargs.pop('mode', 'markers')
+    linewidth = kwargs.pop('linewidth', 1.5)
+    markersize = kwargs.pop('markersize', 6)
+    marker = kwargs.pop('marker', 'o')
+    linestyle = kwargs.pop('linestyle', '-')
+    alpha = kwargs.pop('alpha', 1.0)
+    showlegend = kwargs.pop('showlegend', True)
+    
+    # Determine dimensionality
+    if isinstance(data, list):
+        ndim = data[0].shape[1] if data[0].shape[1] <= 3 else 3
+    else:
+        ndim = data.shape[1] if data.shape[1] <= 3 else 3
+    
+    # Create figure and axes if needed
+    if fig is None or ax is None:
+        fig, ax = get_empty_canvas(projection='3d' if ndim == 3 else None)
+    
+    # Handle list of datasets
+    if isinstance(data, list):
+        names = kwargs.pop('name', [f'Dataset {i+1}' for i in range(len(data))])
         for i, d in enumerate(data):
-            opts = {'color': get(color, i), 'fig': fig, 'name': get(names, i), 'legendgroup': get(names, i)}
-
-            if legend_override is not None:
-                lo = legend_override.copy()
-                lo['labels'] = lo['labels'][i]
-
-                opts['legend_override'] = lo
-
-            fig = static_plot(d, **dw.core.update_dict(kwargs, opts))
-
-        return fig
-    kwargs = dw.core.update_dict({'name': ''}, kwargs)
-
-    color = get(color, range(data.shape[0]), axis=0)
-    if dw.zoo.is_multiindex_dataframe(data):
-        color_df = pd.DataFrame(color, index=data.index)
-        group_means = group_mean(data)
-        group_colors = group_mean(color_df).values
-
-        scale_properties = ['linewidth', 'markersize', '_alpha']
-        group_kwargs = kwargs.copy()
-        for s in scale_properties:
-            if s[0] == '_':
-                group_kwargs[s] /= defaults['plot']['scale']
-            else:
-                group_kwargs[s] *= defaults['plot']['scale']
-        group_kwargs['color'] = group_colors
-
-        fig = static_plot(group_means, **group_kwargs)
-
-    # remove defaults that shouldn't be passed to plot
-    remove_params = ['n_colors', 'scale', 'cmap', 'bigmarkersize', 'smallmarkersize']
-    for r in remove_params:
-        kwargs.pop(r, None)
-
-    # note on animations and styles: it'd be nice to be able to *separately* specify an animation style
-    # and plot style for each dataset (e.g. if data is passed as a list or stacked dataframe)
-
-    # also, could add support for using arbitrary text as markers
-
-    unique_colors = np.unique(color, axis=0)
-    for i in range(unique_colors.shape[0]):
-        c = unique_colors[i, :]
-        c_inds = match_color(color, c)[0]
-
-        for j, inds in enumerate(get_continuous_inds(c_inds)):
-            if i > 0 or j > 0:
-                opts = {'showlegend': False}
-            else:
-                opts = {}
-
-            if len(inds) == 1:
-                if inds[0] < data.shape[0] - 1:
-                    inds = np.array([inds[0], inds[0] + 1])
-                else:
-                    inds = np.array([inds[0], inds[0]])
-
-            if legend_override is not None:
-                next_labels = legend_override['labels'].iloc[inds].values
-                for k in np.unique(next_labels):
-                    group_inds = inds[np.where(next_labels == k)[0]]
-
-                    if max(group_inds) < data.shape[0] - 1:
-                        group_inds = np.append(group_inds, [max(group_inds) + 1])
-
-                    group_opts = opts.copy()
-                    # Find the index of this label in the names list
-                    if isinstance(legend_override['names'], list):
-                        # Convert names list to dict mapping label -> name
-                        if k in legend_override['names']:
-                            group_opts['legendgroup'] = k
-                        else:
-                            # Try to find by index if k is numeric
-                            try:
-                                idx = int(k)
-                                if 0 <= idx < len(legend_override['names']):
-                                    group_opts['legendgroup'] = legend_override['names'][idx]
-                                else:
-                                    group_opts['legendgroup'] = str(k)
-                            except (ValueError, TypeError):
-                                group_opts['legendgroup'] = str(k)
-                    else:
-                        group_opts['legendgroup'] = legend_override['names'][k]
-                    fig.add_trace(get_plotly_shape(data.values[group_inds, :],
-                                                   **dw.core.update_dict(kwargs, group_opts),
-                                                   color=mpl2plotly_color(c)))
-            else:
-                if max(inds) < data.shape[0] - 1:
-                    inds = np.append(inds, [max(inds) + 1])
-
-                fig.add_trace(get_plotly_shape(data.values[inds, :],
-                                               **dw.core.update_dict(kwargs, opts),
-                                               color=mpl2plotly_color(c)))
-
-    return fig
+            c = get(color, i) if color is not None else f'C{i}'
+            label = names[i] if showlegend else None
+            plot_data_matplotlib(ax, d, mode=mode, color=c, linewidth=linewidth,
+                               markersize=markersize, marker=marker, linestyle=linestyle,
+                               alpha=alpha, label=label)
+    else:
+        # Single dataset
+        if color is None:
+            color = 'C0'
+        elif isinstance(color, (list, np.ndarray)) and len(color) == data.shape[0]:
+            # Per-point colors
+            unique_colors = np.unique(color, axis=0)
+            for uc in unique_colors:
+                c_inds = match_color(color, uc)[0]
+                for inds in get_continuous_inds(c_inds):
+                    if len(inds) == 1:
+                        inds = np.array([inds[0], min(inds[0] + 1, data.shape[0] - 1)])
+                    plot_data_matplotlib(ax, data.values[inds, :] if hasattr(data, 'values') else data[inds, :],
+                                       mode=mode, color=normalize_color(uc), linewidth=linewidth,
+                                       markersize=markersize, marker=marker, linestyle=linestyle,
+                                       alpha=alpha)
+        else:
+            # Single color for all points
+            plot_data_matplotlib(ax, data, mode=mode, color=color, linewidth=linewidth,
+                               markersize=markersize, marker=marker, linestyle=linestyle,
+                               alpha=alpha)
+    
+    # Show legend if requested
+    if showlegend and ax.get_legend_handles_labels()[0]:
+        ax.legend()
+    
+    return fig, ax
