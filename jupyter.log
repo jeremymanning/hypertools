@@ -1,0 +1,52 @@
+[I 2025-06-14 18:49:20.348 ServerApp] Extension package panel.io.jupyter_server_extension took 0.4424s to import
+[I 2025-06-14 18:49:20.348 ServerApp] jupyter_lsp | extension was successfully linked.
+[I 2025-06-14 18:49:20.350 ServerApp] jupyter_server_terminals | extension was successfully linked.
+[I 2025-06-14 18:49:20.352 ServerApp] jupyterlab | extension was successfully linked.
+[I 2025-06-14 18:49:20.354 ServerApp] notebook | extension was successfully linked.
+[I 2025-06-14 18:49:20.473 ServerApp] notebook_shim | extension was successfully linked.
+[I 2025-06-14 18:49:20.473 ServerApp] panel.io.jupyter_server_extension | extension was successfully linked.
+[I 2025-06-14 18:49:20.489 ServerApp] notebook_shim | extension was successfully loaded.
+[I 2025-06-14 18:49:20.491 ServerApp] jupyter_lsp | extension was successfully loaded.
+[I 2025-06-14 18:49:20.491 ServerApp] jupyter_server_terminals | extension was successfully loaded.
+[I 2025-06-14 18:49:20.493 LabApp] JupyterLab extension loaded from /Users/jmanning/miniconda3/lib/python3.12/site-packages/jupyterlab
+[I 2025-06-14 18:49:20.493 LabApp] JupyterLab application directory is /Users/jmanning/miniconda3/share/jupyter/lab
+[I 2025-06-14 18:49:20.493 LabApp] Extension Manager is 'pypi'.
+[I 2025-06-14 18:49:20.552 ServerApp] jupyterlab | extension was successfully loaded.
+[I 2025-06-14 18:49:20.554 ServerApp] notebook | extension was successfully loaded.
+[I 2025-06-14 18:49:20.554 ServerApp] panel.io.jupyter_server_extension | extension was successfully loaded.
+[I 2025-06-14 18:49:20.554 ServerApp] Serving notebooks from local directory: /Users/jmanning/hypertools
+[I 2025-06-14 18:49:20.554 ServerApp] Jupyter Server 2.16.0 is running at:
+[I 2025-06-14 18:49:20.554 ServerApp] http://127.0.0.1:8888/tree?token=a02bcf9a88b511f25ad871117a55ff9e5b558961fa9b440d
+[I 2025-06-14 18:49:20.554 ServerApp] Use Control-C to stop this server and shut down all kernels (twice to skip confirmation).
+[C 2025-06-14 18:49:20.557 ServerApp] 
+    
+    To access the server, open this file in a browser:
+        file:///Users/jmanning/Library/Jupyter/runtime/jpserver-61975-open.html
+    Or copy and paste one of these URLs:
+        http://127.0.0.1:8888/tree?token=a02bcf9a88b511f25ad871117a55ff9e5b558961fa9b440d
+[I 2025-06-14 18:49:20.654 ServerApp] Skipped non-installed server(s): bash-language-server, dockerfile-language-server-nodejs, javascript-typescript-langserver, jedi-language-server, julia-language-server, pyright, python-language-server, python-lsp-server, r-languageserver, sql-language-server, texlab, typescript-language-server, unified-language-server, vscode-css-languageserver-bin, vscode-html-languageserver-bin, vscode-json-languageserver-bin, yaml-language-server
+[W 2025-06-14 18:49:25.642 ServerApp] Notebook test_kernel_minimal.ipynb is not trusted
+[W 2025-06-14 18:49:26.212 ServerApp] Notebook test_kernel_minimal.ipynb is not trusted
+[I 2025-06-14 18:49:26.394 ServerApp] Kernel started: a37c6bad-6db8-4b2f-bb48-9d14e9097764
+[I 2025-06-14 18:49:43.410 ServerApp] Connecting to kernel a37c6bad-6db8-4b2f-bb48-9d14e9097764.
+[I 2025-06-14 18:49:43.412 ServerApp] Connecting to kernel a37c6bad-6db8-4b2f-bb48-9d14e9097764.
+[I 2025-06-14 18:49:43.416 ServerApp] Connecting to kernel a37c6bad-6db8-4b2f-bb48-9d14e9097764.
+[I 2025-06-14 18:49:43.421 ServerApp] Connecting to kernel a37c6bad-6db8-4b2f-bb48-9d14e9097764.
+[W 2025-06-14 18:49:43.429 ServerApp] Got events for closed stream <zmq.eventloop.zmqstream.ZMQStream object at 0x165389430>
+[W 2025-06-14 18:49:43.438 ServerApp] Got events for closed stream <zmq.eventloop.zmqstream.ZMQStream object at 0x1653bcf50>
+[W 2025-06-14 18:49:43.441 ServerApp] Got events for closed stream <zmq.eventloop.zmqstream.ZMQStream object at 0x1653bdac0>
+[I 2025-06-14 18:51:26.280 ServerApp] Saving file at /test_kernel_minimal.ipynb
+[I 2025-06-14 18:52:32.475 ServerApp] Starting buffering for a37c6bad-6db8-4b2f-bb48-9d14e9097764:07aee72e-073e-46a4-8593-6afe90f3ce93
+[W 2025-06-14 18:52:35.885 ServerApp] Notebook test_camera_fix_jupyter.ipynb is not trusted
+[I 2025-06-14 18:52:36.349 ServerApp] Connecting to kernel a37c6bad-6db8-4b2f-bb48-9d14e9097764.
+[W 2025-06-14 18:52:36.440 ServerApp] Notebook test_camera_fix_jupyter.ipynb is not trusted
+[I 2025-06-14 18:52:36.519 ServerApp] Starting buffering for a37c6bad-6db8-4b2f-bb48-9d14e9097764:e96516a9-4c12-4927-98b0-4655c7c128df
+[I 2025-06-14 18:52:36.653 ServerApp] Kernel started: 7f48d61b-38bf-4afe-a3b0-ccc644521949
+[I 2025-06-14 18:52:36.996 ServerApp] Connecting to kernel 7f48d61b-38bf-4afe-a3b0-ccc644521949.
+[I 2025-06-14 18:54:36.478 ServerApp] Saving file at /test_camera_fix_jupyter.ipynb
+[I 2025-06-14 18:56:37.356 ServerApp] Starting buffering for 7f48d61b-38bf-4afe-a3b0-ccc644521949:16353579-c8e1-4df6-a127-d9fe7d4a9a24
+[C 2025-06-14 18:59:52.029 ServerApp] received signal 15, stopping
+[I 2025-06-14 18:59:52.030 ServerApp] Shutting down 6 extensions
+[I 2025-06-14 18:59:52.030 ServerApp] Shutting down 2 kernels
+[I 2025-06-14 18:59:52.031 ServerApp] Kernel shutdown: 7f48d61b-38bf-4afe-a3b0-ccc644521949
+[I 2025-06-14 18:59:52.031 ServerApp] Kernel shutdown: a37c6bad-6db8-4b2f-bb48-9d14e9097764
